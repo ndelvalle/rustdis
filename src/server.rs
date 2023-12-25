@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::Error;
+
 type Store = Arc<Mutex<HashMap<String, String>>>;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run() -> Result<(), Error> {
     let listener = TcpListener::bind("127.0.0.1:6379").await?;
     let store = Arc::new(Mutex::new(HashMap::new()));
 
