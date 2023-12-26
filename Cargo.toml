@@ -3,8 +3,13 @@ name = "rustdis"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "rustdis"
+path = "src/bin/server.rs"
+
 
 [dependencies]
+bytes = "1.5.0"
 # TODO: Use only required features.
 tokio = { version = "1.35.0", features = ['full'] }
