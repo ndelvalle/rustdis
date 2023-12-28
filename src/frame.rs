@@ -44,8 +44,8 @@ impl Frame {
 
         match data_type {
             DataType::SimpleString => {
-                let line = get_bytes(src)?.to_vec();
-                let string = String::from_utf8(line)?;
+                let bytes = get_frame_bytes(src)?.to_vec();
+                let string = String::from_utf8(bytes)?;
                 Ok(Frame::Simple(string))
             }
             _ => todo!(),
@@ -53,7 +53,7 @@ impl Frame {
     }
 }
 
-fn get_bytes<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
+fn get_frame_bytes<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
     let start = src.position() as usize;
     let end = src.get_ref().len();
 
