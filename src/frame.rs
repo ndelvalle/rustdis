@@ -2,18 +2,20 @@
 
 use bytes::Buf;
 use bytes::Bytes;
-use std::fmt;
 use std::io::Cursor;
 use std::string::FromUtf8Error;
+use thiserror::Error as ThisError;
 
 static CRLF: &[u8; 2] = b"\r\n";
 
-#[derive(Debug)]
+#[derive(Debug, ThisError)]
 pub enum Error {
-    /// Not enough data is available to parse an entire frame.
+    #[error("not enough data is available to parse an entire frame")]
     Incomplete,
+    #[error("invalid frame data type: {0}")]
     InvalidDataType(u8),
     /// Invalid message encoding.
+    #[error("{0}")]
     Other(crate::Error),
 }
 
@@ -133,19 +135,5 @@ impl From<&str> for Error {
 impl From<String> for Error {
     fn from(src: String) -> Error {
         Error::Other(src.into())
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::Incomplete => "stream ended early".fmt(fmt),
-            Error::InvalidDataType(data_type) => {
-                write!(fmt, "invalid data type: {}", data_type)
-            }
-            Error::Other(err) => err.fmt(fmt),
-        }
     }
 }
