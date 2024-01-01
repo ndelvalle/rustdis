@@ -62,6 +62,24 @@ impl Frame {
 
                 Ok(Frame::Integer(integer))
             }
+            // $<length>\r\n<data>\r\n
+            DataType::BulkString => {
+                let length = get_frame_bytes(src)?;
+                let length = String::from_utf8(length.to_vec())?;
+                let length = length
+                    .parse::<isize>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                if length == -1 {
+                    return Ok(Frame::Null);
+                }
+
+                let data = get_frame_bytes(src)?;
+                let data = Bytes::from(data.to_vec());
+
+                Ok(Frame::Bulk(data))
+            }
             _ => todo!(),
         }
     }
@@ -206,5 +224,41 @@ mod tests {
     #[test]
     fn parse_integer_frame_positive_singned() {
         parse_integer_frame(b":+1000\r\n", 1000);
+    }
+
+    #[test]
+    fn parse_bulk_string_frame() {
+        let data = b"$6\r\nfoobar\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Bulk(ref b)) if b == &Bytes::from("foobar")
+        ));
+    }
+
+    #[test]
+    fn parse_bulk_string_frame_empty() {
+        let data = b"$0\r\n\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Bulk(ref b)) if b == &Bytes::from("")
+        ));
+    }
+
+    #[test]
+    fn parse_bulk_string_frame_null() {
+        let data = b"$-1\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Null)));
     }
 }
