@@ -23,21 +23,21 @@ pub enum Error {
 pub enum Frame {
     Simple(String),
     Error(String),
-    Integer(u64),
+    Integer(i64),
     Bulk(Bytes),
     Null,
     Array(Vec<Frame>),
 }
 
 impl Frame {
-    // The \r\n (CRLF) is the protocol's terminator, which always separates its parts.
+    // CRLF is the protocol's terminator, which always separates its parts.
     pub fn can_parse(buffer: &[u8]) -> bool {
         buffer.windows(2).any(|window| window == CRLF)
     }
 
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Self, Error> {
-        // The first byte in an RESP-serialized payload always identifies its type. Subsequent
-        // bytes constitute the type's contents.
+        // The first byte in an RESP-serialized payload always identifies its type.
+        // Subsequent bytes constitute the type's contents.
         let first_byte = get_byte(src)?;
         let data_type = DataType::try_from(first_byte)?;
 
@@ -46,6 +46,21 @@ impl Frame {
                 let bytes = get_frame_bytes(src)?.to_vec();
                 let string = String::from_utf8(bytes)?;
                 Ok(Frame::Simple(string))
+            }
+            DataType::SimpleError => {
+                let bytes = get_frame_bytes(src)?.to_vec();
+                let string = String::from_utf8(bytes)?;
+                Ok(Frame::Error(string))
+            }
+            DataType::Integer => {
+                let bytes = get_frame_bytes(src)?.to_vec();
+                let string = String::from_utf8(bytes)?;
+                let integer = string
+                    .parse::<i64>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                Ok(Frame::Integer(integer))
             }
             _ => todo!(),
         }
@@ -135,5 +150,61 @@ impl From<&str> for Error {
 impl From<String> for Error {
     fn from(src: String) -> Error {
         Error::Other(src.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_simple_string_frame() {
+        let data = b"+OK\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Simple(ref s)) if s == "OK"));
+    }
+
+    #[test]
+    fn parse_simple_error_frame() {
+        let data = b"-Error message\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Error(ref s)) if s == "Error message"
+        ));
+    }
+
+    fn parse_integer_frame(data: &[u8], expected: i64) {
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Integer(i)) if i == expected));
+    }
+
+    #[test]
+    fn parse_integer_frame_positive() {
+        parse_integer_frame(b":1000\r\n", 1000);
+    }
+
+    #[test]
+    fn parse_integer_frame_negative() {
+        parse_integer_frame(b":-1000\r\n", -1000);
+    }
+
+    #[test]
+    fn parse_integer_frame_zero() {
+        parse_integer_frame(b":0\r\n", 0);
+    }
+
+    #[test]
+    fn parse_integer_frame_positive_singned() {
+        parse_integer_frame(b":+1000\r\n", 1000);
     }
 }
