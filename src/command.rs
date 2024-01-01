@@ -4,8 +4,8 @@ use crate::frame::Frame;
 use crate::Error;
 
 pub enum Command {
-    Get(Get),
-    Set(Set),
+    Get { key: String },
+    Set { key: String, value: Bytes },
 }
 
 impl TryFrom<Frame> for Command {
@@ -20,13 +20,4 @@ impl TryFrom<Frame> for Command {
 
         todo!()
     }
-}
-
-pub struct Get {
-    key: String,
-}
-
-pub struct Set {
-    key: String,
-    value: Bytes,
 }
