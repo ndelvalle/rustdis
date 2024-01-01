@@ -80,6 +80,27 @@ impl Frame {
 
                 Ok(Frame::Bulk(data))
             }
+            // *<number-of-elements>\r\n<element-1>...<element-n>
+            DataType::Array => {
+                let length = get_frame_bytes(src)?;
+                let length = String::from_utf8(length.to_vec())?;
+                let length = length
+                    .parse::<isize>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                if length == -1 {
+                    return Ok(Frame::Null);
+                }
+
+                let mut frames = Vec::with_capacity(length as usize);
+                for _ in 0..length {
+                    let frame = Self::parse(src)?;
+                    frames.push(frame);
+                }
+
+                Ok(Frame::Array(frames))
+            }
             _ => todo!(),
         }
     }
@@ -260,5 +281,103 @@ mod tests {
         let frame = Frame::parse(&mut cursor);
 
         assert!(matches!(frame, Ok(Frame::Null)));
+    }
+
+    #[test]
+    fn parse_array_frame_empty() {
+        let data = b"*0\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Array(ref a)) if a.is_empty()));
+    }
+
+    #[test]
+    fn parse_array_frame() {
+        let data = b"*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a.len() == 2
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[0] == Frame::Bulk(Bytes::from("hello"))
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[1] == Frame::Bulk(Bytes::from("world"))
+        ));
+    }
+
+    #[test]
+    fn parse_array_frame_nested() {
+        let data = b"*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a.len() == 2
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[0] == Frame::Array(vec![
+                Frame::Integer(1),
+                Frame::Integer(2),
+                Frame::Integer(3)
+            ])
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[1] == Frame::Array(vec![
+                Frame::Simple("Hello".to_string()),
+                Frame::Error("World".to_string())
+            ])
+        ));
+    }
+
+    #[test]
+    fn parse_array_frame_null() {
+        let data = b"*-1\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Null)));
+    }
+
+    #[test]
+    fn parse_array_frame_null_in_the_middle() {
+        let data = b"*3\r\n$5\r\nhello\r\n$-1\r\n$5\r\nworld\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a.len() == 3
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[0] == Frame::Bulk(Bytes::from("hello"))
+        ));
+
+        assert!(matches!(frame, Ok(Frame::Array(ref a)) if a[1] == Frame::Null));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[2] == Frame::Bulk(Bytes::from("world"))
+        ));
     }
 }
