@@ -12,6 +12,7 @@ static CRLF: &[u8; 2] = b"\r\n";
 pub enum Error {
     /// Not enough data is available to parse an entire frame.
     Incomplete,
+    InvalidDataType(u8),
     /// Invalid message encoding.
     Other(crate::Error),
 }
@@ -36,11 +37,7 @@ impl Frame {
         // The first byte in an RESP-serialized payload always identifies its type. Subsequent
         // bytes constitute the type's contents.
         let first_byte = get_byte(src)?;
-        let data_type = match DataType::from_byte(first_byte) {
-            Some(data_type) => data_type,
-            // TODO: Create a new error type or return Error::Other?
-            None => panic!("Invalid data type"),
-        };
+        let data_type = DataType::try_from(first_byte)?;
 
         match data_type {
             DataType::SimpleString => {
@@ -97,24 +94,26 @@ enum DataType {
     Push,           // '>'
 }
 
-impl DataType {
-    fn from_byte(byte: u8) -> Option<Self> {
+impl TryFrom<u8> for DataType {
+    type Error = Error;
+
+    fn try_from(byte: u8) -> Result<Self, Self::Error> {
         match byte {
-            b'+' => Some(Self::SimpleString),
-            b'-' => Some(Self::SimpleError),
-            b':' => Some(Self::Integer),
-            b'$' => Some(Self::BulkString),
-            b'*' => Some(Self::Array),
-            b'_' => Some(Self::Null),
-            b'#' => Some(Self::Boolean),
-            b',' => Some(Self::Double),
-            b'(' => Some(Self::BigNumber),
-            b'!' => Some(Self::BulkError),
-            b'=' => Some(Self::VerbatimString),
-            b'%' => Some(Self::Map),
-            b'~' => Some(Self::Set),
-            b'>' => Some(Self::Push),
-            _ => None,
+            b'+' => Ok(Self::SimpleString),
+            b'-' => Ok(Self::SimpleError),
+            b':' => Ok(Self::Integer),
+            b'$' => Ok(Self::BulkString),
+            b'*' => Ok(Self::Array),
+            b'_' => Ok(Self::Null),
+            b'#' => Ok(Self::Boolean),
+            b',' => Ok(Self::Double),
+            b'(' => Ok(Self::BigNumber),
+            b'!' => Ok(Self::BulkError),
+            b'=' => Ok(Self::VerbatimString),
+            b'%' => Ok(Self::Map),
+            b'~' => Ok(Self::Set),
+            b'>' => Ok(Self::Push),
+            _ => Err(Error::InvalidDataType(byte)),
         }
     }
 }
@@ -143,6 +142,9 @@ impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::Incomplete => "stream ended early".fmt(fmt),
+            Error::InvalidDataType(data_type) => {
+                write!(fmt, "invalid data type: {}", data_type)
+            }
             Error::Other(err) => err.fmt(fmt),
         }
     }
