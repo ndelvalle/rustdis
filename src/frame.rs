@@ -101,6 +101,12 @@ impl Frame {
 
                 Ok(Frame::Array(frames))
             }
+            DataType::Null => {
+                // Advance the cursor to the end of the frame.
+                let _ = get_frame_bytes(src)?.to_vec();
+
+                Ok(Frame::Null)
+            }
             _ => todo!(),
         }
     }
