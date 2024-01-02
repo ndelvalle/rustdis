@@ -2,18 +2,20 @@
 
 use bytes::Buf;
 use bytes::Bytes;
-use std::fmt;
 use std::io::Cursor;
 use std::string::FromUtf8Error;
+use thiserror::Error as ThisError;
 
 static CRLF: &[u8; 2] = b"\r\n";
 
-#[derive(Debug)]
+#[derive(Debug, ThisError)]
 pub enum Error {
-    /// Not enough data is available to parse an entire frame.
+    #[error("not enough data is available to parse an entire frame")]
     Incomplete,
+    #[error("invalid frame data type: {0}")]
     InvalidDataType(u8),
     /// Invalid message encoding.
+    #[error("{0}")]
     Other(crate::Error),
 }
 
@@ -21,21 +23,21 @@ pub enum Error {
 pub enum Frame {
     Simple(String),
     Error(String),
-    Integer(u64),
+    Integer(i64),
     Bulk(Bytes),
     Null,
     Array(Vec<Frame>),
 }
 
 impl Frame {
-    // The \r\n (CRLF) is the protocol's terminator, which always separates its parts.
+    // CRLF is the protocol's terminator, which always separates its parts.
     pub fn can_parse(buffer: &[u8]) -> bool {
         buffer.windows(2).any(|window| window == CRLF)
     }
 
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Self, Error> {
-        // The first byte in an RESP-serialized payload always identifies its type. Subsequent
-        // bytes constitute the type's contents.
+        // The first byte in an RESP-serialized payload always identifies its type.
+        // Subsequent bytes constitute the type's contents.
         let first_byte = get_byte(src)?;
         let data_type = DataType::try_from(first_byte)?;
 
@@ -44,6 +46,66 @@ impl Frame {
                 let bytes = get_frame_bytes(src)?.to_vec();
                 let string = String::from_utf8(bytes)?;
                 Ok(Frame::Simple(string))
+            }
+            DataType::SimpleError => {
+                let bytes = get_frame_bytes(src)?.to_vec();
+                let string = String::from_utf8(bytes)?;
+                Ok(Frame::Error(string))
+            }
+            DataType::Integer => {
+                let bytes = get_frame_bytes(src)?.to_vec();
+                let string = String::from_utf8(bytes)?;
+                let integer = string
+                    .parse::<i64>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                Ok(Frame::Integer(integer))
+            }
+            // $<length>\r\n<data>\r\n
+            DataType::BulkString => {
+                let length = get_frame_bytes(src)?;
+                let length = String::from_utf8(length.to_vec())?;
+                let length = length
+                    .parse::<isize>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                if length == -1 {
+                    return Ok(Frame::Null);
+                }
+
+                let data = get_frame_bytes(src)?;
+                let data = Bytes::from(data.to_vec());
+
+                Ok(Frame::Bulk(data))
+            }
+            // *<number-of-elements>\r\n<element-1>...<element-n>
+            DataType::Array => {
+                let length = get_frame_bytes(src)?;
+                let length = String::from_utf8(length.to_vec())?;
+                let length = length
+                    .parse::<isize>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                if length == -1 {
+                    return Ok(Frame::Null);
+                }
+
+                let mut frames = Vec::with_capacity(length as usize);
+                for _ in 0..length {
+                    let frame = Self::parse(src)?;
+                    frames.push(frame);
+                }
+
+                Ok(Frame::Array(frames))
+            }
+            DataType::Null => {
+                // Advance the cursor to the end of the frame.
+                let _ = get_frame_bytes(src)?.to_vec();
+
+                Ok(Frame::Null)
             }
             _ => todo!(),
         }
@@ -136,16 +198,192 @@ impl From<String> for Error {
     }
 }
 
-impl std::error::Error for Error {}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::Incomplete => "stream ended early".fmt(fmt),
-            Error::InvalidDataType(data_type) => {
-                write!(fmt, "invalid data type: {}", data_type)
-            }
-            Error::Other(err) => err.fmt(fmt),
-        }
+    #[test]
+    fn parse_simple_string_frame() {
+        let data = b"+OK\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Simple(ref s)) if s == "OK"));
+    }
+
+    #[test]
+    fn parse_simple_error_frame() {
+        let data = b"-Error message\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Error(ref s)) if s == "Error message"
+        ));
+    }
+
+    fn parse_integer_frame(data: &[u8], expected: i64) {
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Integer(i)) if i == expected));
+    }
+
+    #[test]
+    fn parse_integer_frame_positive() {
+        parse_integer_frame(b":1000\r\n", 1000);
+    }
+
+    #[test]
+    fn parse_integer_frame_negative() {
+        parse_integer_frame(b":-1000\r\n", -1000);
+    }
+
+    #[test]
+    fn parse_integer_frame_zero() {
+        parse_integer_frame(b":0\r\n", 0);
+    }
+
+    #[test]
+    fn parse_integer_frame_positive_singned() {
+        parse_integer_frame(b":+1000\r\n", 1000);
+    }
+
+    #[test]
+    fn parse_bulk_string_frame() {
+        let data = b"$6\r\nfoobar\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Bulk(ref b)) if b == &Bytes::from("foobar")
+        ));
+    }
+
+    #[test]
+    fn parse_bulk_string_frame_empty() {
+        let data = b"$0\r\n\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Bulk(ref b)) if b == &Bytes::from("")
+        ));
+    }
+
+    #[test]
+    fn parse_bulk_string_frame_null() {
+        let data = b"$-1\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Null)));
+    }
+
+    #[test]
+    fn parse_array_frame_empty() {
+        let data = b"*0\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Array(ref a)) if a.is_empty()));
+    }
+
+    #[test]
+    fn parse_array_frame() {
+        let data = b"*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a.len() == 2
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[0] == Frame::Bulk(Bytes::from("hello"))
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[1] == Frame::Bulk(Bytes::from("world"))
+        ));
+    }
+
+    #[test]
+    fn parse_array_frame_nested() {
+        let data = b"*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a.len() == 2
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[0] == Frame::Array(vec![
+                Frame::Integer(1),
+                Frame::Integer(2),
+                Frame::Integer(3)
+            ])
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[1] == Frame::Array(vec![
+                Frame::Simple("Hello".to_string()),
+                Frame::Error("World".to_string())
+            ])
+        ));
+    }
+
+    #[test]
+    fn parse_array_frame_null() {
+        let data = b"*-1\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Null)));
+    }
+
+    #[test]
+    fn parse_array_frame_null_in_the_middle() {
+        let data = b"*3\r\n$5\r\nhello\r\n$-1\r\n$5\r\nworld\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a.len() == 3
+        ));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[0] == Frame::Bulk(Bytes::from("hello"))
+        ));
+
+        assert!(matches!(frame, Ok(Frame::Array(ref a)) if a[1] == Frame::Null));
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Array(ref a)) if a[2] == Frame::Bulk(Bytes::from("world"))
+        ));
     }
 }
