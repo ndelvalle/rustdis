@@ -1,5 +1,7 @@
 // https://redis.io/docs/reference/protocol-spec
 
+use std::fmt;
+
 use bytes::Buf;
 use bytes::Bytes;
 use std::io::Cursor;
@@ -108,6 +110,27 @@ impl Frame {
                 Ok(Frame::Null)
             }
             _ => todo!(),
+        }
+    }
+}
+
+// TODO: Not sure about this display implementation, should we log the actual bytes? I think not,
+// but maybe it will be useful for debugging.
+impl fmt::Display for Frame {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Frame::Simple(s) => write!(f, "+{}", s),
+            Frame::Error(s) => write!(f, "-{}", s),
+            Frame::Integer(i) => write!(f, ":{}", i),
+            Frame::Bulk(bytes) => write!(f, "${}", String::from_utf8_lossy(bytes)),
+            Frame::Null => write!(f, "$-1"),
+            Frame::Array(arr) => {
+                write!(f, "*{}\r\n", arr.len())?;
+                for frame in arr {
+                    write!(f, "{}\r\n", frame)?;
+                }
+                Ok(())
+            }
         }
     }
 }
