@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use thiserror::Error as ThisError;
 
 use crate::frame::Frame;
@@ -5,8 +6,10 @@ use crate::Error;
 
 use std::{str, vec};
 
+#[derive(Debug, PartialEq)]
 enum Command {
     Get(Get),
+    Set(Set),
 }
 
 impl TryFrom<Frame> for Command {
@@ -18,13 +21,21 @@ impl TryFrom<Frame> for Command {
 
         match &command_name[..] {
             "get" => Get::try_from(&mut parser).map(Command::Get),
+            "set" => Set::try_from(&mut parser).map(Command::Set),
             name => return Err(format!("protocol error; unknown command {:?}", name).into()),
         }
     }
 }
 
+#[derive(Debug, PartialEq)]
 struct Get {
     key: String,
+}
+
+#[derive(Debug, PartialEq)]
+struct Set {
+    key: String,
+    value: Bytes,
 }
 
 impl TryFrom<&mut CommandParser> for Get {
@@ -33,6 +44,17 @@ impl TryFrom<&mut CommandParser> for Get {
     fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
         let key = parser.next_string()?;
         Ok(Self { key })
+    }
+}
+
+impl TryFrom<&mut CommandParser> for Set {
+    type Error = Error;
+
+    fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
+        let key = parser.next_string()?;
+        let value = parser.next_bytes()?;
+
+        Ok(Self { key, value })
     }
 }
 
@@ -75,6 +97,24 @@ impl CommandParser {
             }),
         }
     }
+
+    fn next_bytes(&mut self) -> Result<Bytes, CommandParserError> {
+        let frame = self
+            .parts
+            .next()
+            .ok_or_else(|| CommandParserError::EndOfStream)?;
+
+        match frame {
+            // Both `Simple` and `Bulk` representation may be strings. Strings are parsed to UTF-8.
+            // While errors are stored as strings, they are considered separate types.
+            Frame::Simple(s) => Ok(Bytes::from(s)),
+            Frame::Bulk(bytes) => Ok(bytes),
+            frame => Err(CommandParserError::InvalidFrame {
+                expected: "simple or bulk string".to_string(),
+                actual: frame,
+            }),
+        }
+    }
 }
 
 #[derive(Debug, ThisError)]
@@ -105,5 +145,111 @@ impl TryFrom<Frame> for CommandParser {
         Ok(Self {
             parts: frames.into_iter(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_get_command_with_simple_string() {
+        let get_frame = Frame::Array(vec![
+            Frame::Simple(String::from("GET")),
+            Frame::Simple(String::from("foo")),
+        ]);
+
+        let get_command = Command::try_from(get_frame).unwrap();
+
+        assert_eq!(
+            get_command,
+            Command::Get(Get {
+                key: String::from("foo")
+            })
+        );
+    }
+
+    #[test]
+    fn parse_get_command_with_bulk_string() {
+        let get_frame = Frame::Array(vec![
+            Frame::Simple(String::from("GET")),
+            Frame::Bulk(Bytes::from("foo-from-bytes")),
+        ]);
+
+        let get_command = Command::try_from(get_frame).unwrap();
+
+        assert_eq!(
+            get_command,
+            Command::Get(Get {
+                key: String::from("foo-from-bytes")
+            })
+        );
+    }
+
+    #[test]
+    fn parse_set_command() {
+        let set_frame = Frame::Array(vec![
+            Frame::Simple(String::from("SET")),
+            Frame::Simple(String::from("foo")),
+            Frame::Simple(String::from("baz")),
+        ]);
+
+        let set_command = Command::try_from(set_frame).unwrap();
+
+        assert_eq!(
+            set_command,
+            Command::Set(Set {
+                key: String::from("foo"),
+                value: Bytes::from("baz")
+            })
+        );
+
+        let set_frame = Frame::Array(vec![
+            Frame::Simple(String::from("SET")),
+            Frame::Bulk(Bytes::from("foo")),
+            Frame::Bulk(Bytes::from("baz")),
+        ]);
+
+        let set_command = Command::try_from(set_frame).unwrap();
+
+        assert_eq!(
+            set_command,
+            Command::Set(Set {
+                key: String::from("foo"),
+                value: Bytes::from("baz")
+            })
+        );
+
+        let set_frame = Frame::Array(vec![
+            Frame::Simple(String::from("SET")),
+            Frame::Bulk(Bytes::from("foo")),
+            Frame::Simple(String::from("baz")),
+        ]);
+
+        let set_command = Command::try_from(set_frame).unwrap();
+
+        assert_eq!(
+            set_command,
+            Command::Set(Set {
+                key: String::from("foo"),
+                value: Bytes::from("baz")
+            })
+        );
+
+        let set_frame = Frame::Array(vec![
+            Frame::Simple(String::from("SET")),
+            Frame::Simple(String::from("foo")),
+            Frame::Bulk(Bytes::from("baz")),
+        ]);
+
+        let set_command = Command::try_from(set_frame).unwrap();
+
+        assert_eq!(
+            set_command,
+            Command::Set(Set {
+                key: String::from("foo"),
+                value: Bytes::from("baz")
+            })
+        );
     }
 }
