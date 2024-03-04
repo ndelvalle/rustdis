@@ -31,6 +31,7 @@ pub enum Frame {
     Array(Vec<Frame>),
 }
 
+// Protocol specification: https://redis.io/docs/reference/protocol-spec/
 impl Frame {
     // CRLF is the protocol's terminator, which always separates its parts.
     pub fn can_parse(buffer: &[u8]) -> bool {
@@ -82,6 +83,25 @@ impl Frame {
 
                 Ok(Frame::Bulk(data))
             }
+            // !<length>\r\n<error>\r\n
+            DataType::BulkError => {
+                let length = get_frame_bytes(src)?;
+                let length = String::from_utf8(length.to_vec())?;
+                let length = length
+                    .parse::<isize>()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+                    .map_err(Error::Other)?;
+
+                // NOTE: the protocol does not specify a way to represent a null bulk error
+                if length == -1 {
+                    return Ok(Frame::Null);
+                }
+
+                let msg = get_frame_bytes(src)?;
+                let msg = String::from_utf8(msg.to_vec())?;
+
+                Ok(Frame::Error(msg))
+            }
             // *<number-of-elements>\r\n<element-1>...<element-n>
             DataType::Array => {
                 let length = get_frame_bytes(src)?;
@@ -109,7 +129,10 @@ impl Frame {
 
                 Ok(Frame::Null)
             }
-            _ => todo!(),
+            data_type => {
+                println!("Unsupported data type: {:?}", data_type);
+                todo!()
+            }
         }
     }
 }
@@ -160,19 +183,20 @@ fn get_byte(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
 
 #[derive(Debug)]
 enum DataType {
-    // Simple strings are encoded as a plus (+) character, followed by a string. The string mustn't
-    // contain a CR (\r) or LF (\n) character and is terminated by CRLF (i.e., \r\n). Simple
-    // strings transmit short, non-binary strings with minimal overhead.
+    // Simple strings are encoded as a plus (+) character, followed by a string.
+    // The string mustn't contain a CR (\r) or LF (\n) character and is
+    // terminated by CRLF (i.e., \r\n).
+    // Simple strings transmit short, non-binary strings with minimal overhead.
     SimpleString,   // '+'
     SimpleError,    // '-'
     Integer,        // ':'
     BulkString,     // '$'
+    BulkError,      // '!'
     Array,          // '*'
     Null,           // '_'
     Boolean,        // '#'
     Double,         // ','
     BigNumber,      // '('
-    BulkError,      // '!'
     VerbatimString, // '='
     Map,            // '%'
     Set,            // '~'
@@ -188,12 +212,12 @@ impl TryFrom<u8> for DataType {
             b'-' => Ok(Self::SimpleError),
             b':' => Ok(Self::Integer),
             b'$' => Ok(Self::BulkString),
+            b'!' => Ok(Self::BulkError),
             b'*' => Ok(Self::Array),
             b'_' => Ok(Self::Null),
             b'#' => Ok(Self::Boolean),
             b',' => Ok(Self::Double),
             b'(' => Ok(Self::BigNumber),
-            b'!' => Ok(Self::BulkError),
             b'=' => Ok(Self::VerbatimString),
             b'%' => Ok(Self::Map),
             b'~' => Ok(Self::Set),
@@ -305,6 +329,42 @@ mod tests {
     #[test]
     fn parse_bulk_string_frame_null() {
         let data = b"$-1\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(frame, Ok(Frame::Null)));
+    }
+
+    #[test]
+    fn parse_bulk_error_frame() {
+        let data = b"!6\r\nfoobar\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Error(ref s)) if s == "foobar"
+        ));
+    }
+
+    #[test]
+    fn parse_bulk_error_frame_empty() {
+        let data = b"!0\r\n\r\n";
+        let mut cursor = Cursor::new(&data[..]);
+
+        let frame = Frame::parse(&mut cursor);
+
+        assert!(matches!(
+            frame,
+            Ok(Frame::Error(ref s)) if s == ""
+        ));
+    }
+
+    #[test]
+    fn parse_bulk_error_frame_null() {
+        let data = b"!-1\r\n";
         let mut cursor = Cursor::new(&data[..]);
 
         let frame = Frame::parse(&mut cursor);
