@@ -7,7 +7,7 @@ use crate::Error;
 use std::{str, vec};
 
 #[derive(Debug, PartialEq)]
-enum Command {
+pub enum Command {
     Get(Get),
     Set(Set),
 }
@@ -28,14 +28,14 @@ impl TryFrom<Frame> for Command {
 }
 
 #[derive(Debug, PartialEq)]
-struct Get {
-    key: String,
+pub struct Get {
+    pub key: String,
 }
 
 #[derive(Debug, PartialEq)]
-struct Set {
-    key: String,
-    value: Bytes,
+pub struct Set {
+    pub key: String,
+    pub value: Bytes,
 }
 
 impl TryFrom<&mut CommandParser> for Get {
@@ -71,6 +71,9 @@ impl CommandParser {
 
         match command_name {
             Frame::Simple(s) => Ok(s.to_lowercase()),
+            Frame::Bulk(bytes) => str::from_utf8(&bytes[..])
+                .map(|s| s.to_lowercase())
+                .map_err(CommandParserError::InvalidUTF8String),
             frame => Err(CommandParserError::InvalidFrame {
                 expected: "simple string".to_string(),
                 actual: frame,

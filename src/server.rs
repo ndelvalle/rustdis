@@ -1,14 +1,14 @@
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::command::Command;
+use crate::connection::Connection;
+use crate::store::Store;
 use crate::Error;
-
-type Store = Arc<Mutex<HashMap<String, String>>>;
 
 pub async fn run() -> Result<(), Error> {
     let listener = TcpListener::bind("127.0.0.1:6379").await?;
-    let store = Arc::new(Mutex::new(HashMap::new()));
+    let store = Arc::new(Mutex::new(Store::new()));
 
     loop {
         let (socket, _) = listener.accept().await?;
@@ -22,9 +22,28 @@ pub async fn run() -> Result<(), Error> {
     }
 }
 
-async fn handle_connection(
-    mut stream: TcpStream,
-    store: Store,
-) -> Result<(), Box<dyn std::error::Error>> {
-    todo!()
+async fn handle_connection(stream: TcpStream, store: Arc<Mutex<Store>>) -> Result<(), Error> {
+    let mut con = Connection::new(stream);
+
+    let frame = con.read_frame().await?.unwrap();
+
+    let cmd = Command::try_from(frame)?;
+
+    match cmd {
+        Command::Get(cmd) => {
+            let store = store.lock().unwrap();
+            if let Some(value) = store.get(&cmd.key) {
+                println!("Found value: {:?}", value);
+            } else {
+                println!("Value not found");
+            }
+        }
+        Command::Set(cmd) => {
+            let mut store = store.lock().unwrap();
+            store.set(cmd.key, cmd.value);
+            println!("Set value");
+        }
+    }
+
+    Ok(())
 }
