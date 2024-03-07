@@ -187,20 +187,20 @@ enum DataType {
     // The string mustn't contain a CR (\r) or LF (\n) character and is
     // terminated by CRLF (i.e., \r\n).
     // Simple strings transmit short, non-binary strings with minimal overhead.
-    SimpleString,   // '+'
-    SimpleError,    // '-'
-    Integer,        // ':'
     BulkString,     // '$'
+    SimpleString,   // '+'
+    VerbatimString, // '='
+    SimpleError,    // '-'
     BulkError,      // '!'
-    Array,          // '*'
-    Null,           // '_'
     Boolean,        // '#'
+    Integer,        // ':'
     Double,         // ','
     BigNumber,      // '('
-    VerbatimString, // '='
+    Array,          // '*'
     Map,            // '%'
     Set,            // '~'
     Push,           // '>'
+    Null,           // '_'
 }
 
 impl TryFrom<u8> for DataType {
