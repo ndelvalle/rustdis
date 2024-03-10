@@ -187,8 +187,8 @@ enum DataType {
     // The string mustn't contain a CR (\r) or LF (\n) character and is
     // terminated by CRLF (i.e., \r\n).
     // Simple strings transmit short, non-binary strings with minimal overhead.
-    BulkString,     // '$'
     SimpleString,   // '+'
+    BulkString,     // '$'
     VerbatimString, // '='
     SimpleError,    // '-'
     BulkError,      // '!'

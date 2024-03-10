@@ -1,4 +1,4 @@
-pub mod command;
+pub mod commands;
 pub mod connection;
 pub mod frame;
 pub mod server;
