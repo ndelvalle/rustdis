@@ -1,7 +1,9 @@
+use bytes::Bytes;
 use std::sync::{Arc, Mutex};
+use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::command::Command;
+use crate::commands::Command;
 use crate::connection::Connection;
 use crate::store::Store;
 use crate::Error;
@@ -25,25 +27,43 @@ pub async fn run() -> Result<(), Error> {
 async fn handle_connection(stream: TcpStream, store: Arc<Mutex<Store>>) -> Result<(), Error> {
     let mut con = Connection::new(stream);
 
-    let frame = con.read_frame().await?.unwrap();
+    while let Some(frame) = con.read_frame().await? {
+        let cmd = Command::try_from(frame)?;
 
-    let cmd = Command::try_from(frame)?;
-
-    match cmd {
-        Command::Get(cmd) => {
-            let store = store.lock().unwrap();
-            if let Some(value) = store.get(&cmd.key) {
-                println!("Found value: {:?}", value);
-            } else {
-                println!("Value not found");
+        match cmd {
+            Command::Get(cmd) => {
+                get(store.clone(), cmd.key)?;
+                println!("GET");
+                con.stream.write_all(b"+OK\r\n").await?;
             }
-        }
-        Command::Set(cmd) => {
-            let mut store = store.lock().unwrap();
-            store.set(cmd.key, cmd.value);
-            println!("Set value");
+            Command::Set(cmd) => {
+                println!("SET");
+                set(store.clone(), cmd.key, cmd.value)?;
+                con.stream.write_all(b"+OK\r\n").await?;
+            }
+            Command::Info(_cmd) => {
+                println!("Info command");
+                con.stream.write_all(b"+OK\r\n").await?;
+            }
         }
     }
 
+    Ok(())
+}
+
+fn get(store: Arc<Mutex<Store>>, key: String) -> Result<(), Error> {
+    let store = store.lock().unwrap();
+
+    if let Some(value) = store.get(&key) {
+        println!("Found value: {:?}", value);
+    } else {
+        println!("Value not found");
+    }
+    Ok(())
+}
+
+fn set(store: Arc<Mutex<Store>>, key: String, value: Bytes) -> Result<(), Error> {
+    let mut store = store.lock().unwrap();
+    store.set(key, value);
     Ok(())
 }

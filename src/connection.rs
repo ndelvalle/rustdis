@@ -8,10 +8,10 @@ use crate::frame::Frame;
 use crate::Result;
 
 pub struct Connection {
-    stream: TcpStream,
+    pub stream: TcpStream,
     // Data is read from the socket into the read buffer. When a frame is parsed, the corresponding
     // data is removed from the buffer.
-    buffer: BytesMut,
+    pub buffer: BytesMut,
 }
 
 impl Connection {

@@ -1,15 +1,23 @@
+pub mod get;
+pub mod info;
+pub mod set;
+
 use bytes::Bytes;
+use std::{str, vec};
 use thiserror::Error as ThisError;
 
 use crate::frame::Frame;
 use crate::Error;
 
-use std::{str, vec};
+use get::Get;
+use info::Info;
+use set::Set;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
     Get(Get),
     Set(Set),
+    Info(Info),
 }
 
 impl TryFrom<Frame> for Command {
@@ -22,39 +30,9 @@ impl TryFrom<Frame> for Command {
         match &command_name[..] {
             "get" => Get::try_from(&mut parser).map(Command::Get),
             "set" => Set::try_from(&mut parser).map(Command::Set),
+            "info" => Info::try_from(&mut parser).map(Command::Info),
             name => return Err(format!("protocol error; unknown command {:?}", name).into()),
         }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Get {
-    pub key: String,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Set {
-    pub key: String,
-    pub value: Bytes,
-}
-
-impl TryFrom<&mut CommandParser> for Get {
-    type Error = Error;
-
-    fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
-        let key = parser.next_string()?;
-        Ok(Self { key })
-    }
-}
-
-impl TryFrom<&mut CommandParser> for Set {
-    type Error = Error;
-
-    fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
-        let key = parser.next_string()?;
-        let value = parser.next_bytes()?;
-
-        Ok(Self { key, value })
     }
 }
 
