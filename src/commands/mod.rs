@@ -1,6 +1,13 @@
+pub mod client;
+pub mod command;
+pub mod config;
+pub mod dbsize;
+pub mod exists;
 pub mod get;
 pub mod info;
+pub mod module;
 pub mod set;
+pub mod type_;
 
 use bytes::Bytes;
 use std::{str, vec};
@@ -9,15 +16,29 @@ use thiserror::Error as ThisError;
 use crate::frame::Frame;
 use crate::Error;
 
+use client::Client;
+use command::Command as Foo;
+use config::Config;
+use dbsize::DBSize;
+use exists::Exists;
 use get::Get;
 use info::Info;
+use module::Module;
 use set::Set;
+use type_::Type;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
     Get(Get),
     Set(Set),
     Info(Info),
+    Client(Client),
+    Module(Module),
+    Command(Foo),
+    Config(Config),
+    Exists(Exists),
+    DBsize(DBSize),
+    Type(Type),
 }
 
 impl TryFrom<Frame> for Command {
@@ -30,7 +51,14 @@ impl TryFrom<Frame> for Command {
         match &command_name[..] {
             "get" => Get::try_from(&mut parser).map(Command::Get),
             "set" => Set::try_from(&mut parser).map(Command::Set),
+            "exists" => Exists::try_from(&mut parser).map(Command::Exists),
+            "dbsize" => DBSize::try_from(&mut parser).map(Command::DBsize),
             "info" => Info::try_from(&mut parser).map(Command::Info),
+            "client" => Client::try_from(&mut parser).map(Command::Client),
+            "module" => Module::try_from(&mut parser).map(Command::Module),
+            "command" => Foo::try_from(&mut parser).map(Command::Command),
+            "config" => Config::try_from(&mut parser).map(Command::Config),
+            "type" => Type::try_from(&mut parser).map(Command::Type),
             name => return Err(format!("protocol error; unknown command {:?}", name).into()),
         }
     }
