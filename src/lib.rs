@@ -1,3 +1,4 @@
+pub mod codec;
 pub mod commands;
 pub mod connection;
 pub mod frame;
