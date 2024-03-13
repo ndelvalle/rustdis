@@ -34,44 +34,44 @@ async fn handle_connection(stream: TcpStream, store: Arc<Mutex<Store>>) -> Resul
             Command::Get(cmd) => {
                 get(store.clone(), cmd.key)?;
                 println!("GET");
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
             Command::Set(cmd) => {
                 println!("SET");
                 set(store.clone(), cmd.key, cmd.value)?;
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
             Command::Exists(_cmd) => {
                 println!("Exists");
-                con.stream.write_all(b":0\r\n").await?;
+                con.writer.write_all(b":0\r\n").await?;
             }
             Command::DBsize(_cmd) => {
                 println!("DBsize");
-                con.stream.write_all(b":1\r\n").await?;
+                con.writer.write_all(b":1\r\n").await?;
             }
             Command::Type(_cmd) => {
                 println!("Type");
-                con.stream.write_all(b"+string\r\n").await?;
+                con.writer.write_all(b"+string\r\n").await?;
             }
             Command::Info(_cmd) => {
                 println!("Info command");
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
             Command::Client(_cmd) => {
                 println!("Client command");
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
             Command::Module(_cmd) => {
                 println!("Module command");
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
             Command::Command(_cmd) => {
                 println!("Command command");
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
             Command::Config(_cmd) => {
                 println!("Config command");
-                con.stream.write_all(b"+OK\r\n").await?;
+                con.writer.write_all(b"+OK\r\n").await?;
             }
         }
     }
