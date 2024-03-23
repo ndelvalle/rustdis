@@ -181,3 +181,32 @@ async fn test_parse_multiple_commands_sequentially() {
     let expected = Some(Frame::Integer(1000));
     assert_eq!(actual, expected);
 }
+
+#[tokio::test]
+async fn test_parse_incomplete_frame() {
+    let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
+    let mut connection = Connection::new(tcp_stream);
+
+    // Command split into three parts to simulate partial/incomplete data sending.
+    // "*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$7\r\nmyvalue\r\n";
+    let part1 = b"*3\r\n$3\r\nSE";
+    let part2 = b"T\r\n$5\r\nmyke";
+    let part3 = b"y\r\n$7\r\nmyvalue\r\n";
+
+    tokio::spawn(async move {
+        let parts = vec![part1.to_vec(), part2.to_vec(), part3.to_vec()];
+        for part in parts {
+            tcp_stream_tx.send(part.to_vec()).unwrap();
+            // Simulate a delay in sending/receiving the data.
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+    });
+
+    let actual = connection.read_frame().await.unwrap();
+    let expected = Some(Frame::Array(vec![
+        Frame::Bulk(Bytes::from("SET")),
+        Frame::Bulk(Bytes::from("mykey")),
+        Frame::Bulk(Bytes::from("myvalue")),
+    ]));
+    assert_eq!(actual, expected);
+}
