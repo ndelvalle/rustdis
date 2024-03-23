@@ -135,6 +135,67 @@ impl Frame {
             }
         }
     }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        match self {
+            Frame::Simple(s) => {
+                let mut bytes = Vec::with_capacity(1 + s.len() + CRLF.len());
+                bytes.push(u8::from(DataType::SimpleString));
+                bytes.extend_from_slice(s.as_bytes());
+                bytes.extend_from_slice(CRLF);
+                bytes
+            }
+            Frame::Error(s) => {
+                let mut bytes = Vec::with_capacity(1 + s.len() + CRLF.len());
+                bytes.push(u8::from(DataType::SimpleError));
+                bytes.extend_from_slice(s.as_bytes());
+                bytes.extend_from_slice(CRLF);
+                bytes
+            }
+            Frame::Integer(i) => {
+                let mut bytes = Vec::with_capacity(1 + i.to_string().len() + CRLF.len());
+                bytes.push(u8::from(DataType::Integer));
+                bytes.extend_from_slice(i.to_string().as_bytes());
+                bytes.extend_from_slice(CRLF);
+                bytes
+            }
+            Frame::Bulk(bytes) => {
+                let length_str = bytes.len().to_string();
+                let mut result = Vec::with_capacity(
+                    1 + length_str.len() + CRLF.len() + bytes.len() + CRLF.len(),
+                );
+                result.push(u8::from(DataType::BulkString));
+                result.extend_from_slice(length_str.as_bytes());
+                result.extend_from_slice(CRLF);
+                result.extend_from_slice(bytes);
+                result.extend_from_slice(CRLF);
+                result
+            }
+            Frame::Null => {
+                let mut bytes = Vec::with_capacity(3);
+                bytes.push(u8::from(DataType::Null));
+                bytes.extend_from_slice(CRLF);
+                bytes
+            }
+            Frame::Array(arr) => {
+                let length_str = arr.len().to_string();
+                let mut bytes = Vec::with_capacity(1 + length_str.len() + CRLF.len());
+                bytes.push(u8::from(DataType::Array));
+                bytes.extend_from_slice(length_str.as_bytes());
+                bytes.extend_from_slice(CRLF);
+                for frame in arr {
+                    bytes.extend(frame.serialize());
+                }
+                bytes
+            }
+        }
+    }
+}
+
+impl From<Frame> for Vec<u8> {
+    fn from(frame: Frame) -> Self {
+        frame.serialize()
+    }
 }
 
 // TODO: Not sure about this display implementation, should we log the actual bytes? I think not,
@@ -183,10 +244,6 @@ fn get_byte(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
 
 #[derive(Debug)]
 enum DataType {
-    // Simple strings are encoded as a plus (+) character, followed by a string.
-    // The string mustn't contain a CR (\r) or LF (\n) character and is
-    // terminated by CRLF (i.e., \r\n).
-    // Simple strings transmit short, non-binary strings with minimal overhead.
     SimpleString,   // '+'
     BulkString,     // '$'
     VerbatimString, // '='
@@ -200,7 +257,11 @@ enum DataType {
     Map,            // '%'
     Set,            // '~'
     Push,           // '>'
-    Null,           // '_'
+    // Due to historical reasons, RESP2 features two specially crafted values for representing null
+    // values of bulk strings and arrays. This duality has always been a redundancy that added zero
+    // semantical value to the protocol itself. The null type, introduced in RESP3, aims to fix
+    // this wrong.
+    Null, // '_'
 }
 
 impl TryFrom<u8> for DataType {
@@ -223,6 +284,27 @@ impl TryFrom<u8> for DataType {
             b'~' => Ok(Self::Set),
             b'>' => Ok(Self::Push),
             _ => Err(Error::InvalidDataType(byte)),
+        }
+    }
+}
+
+impl From<DataType> for u8 {
+    fn from(value: DataType) -> Self {
+        match value {
+            DataType::SimpleString => b'+',
+            DataType::SimpleError => b'-',
+            DataType::Integer => b':',
+            DataType::BulkString => b'$',
+            DataType::BulkError => b'!',
+            DataType::Array => b'*',
+            DataType::Null => b'_',
+            DataType::Boolean => b'#',
+            DataType::Double => b',',
+            DataType::BigNumber => b'(',
+            DataType::VerbatimString => b'=',
+            DataType::Map => b'%',
+            DataType::Set => b'~',
+            DataType::Push => b'>',
         }
     }
 }

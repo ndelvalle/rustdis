@@ -5,6 +5,7 @@ use tokio::net::{TcpListener, TcpStream};
 
 use crate::commands::Command;
 use crate::connection::Connection;
+use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
@@ -32,9 +33,10 @@ async fn handle_connection(stream: TcpStream, store: Arc<Mutex<Store>>) -> Resul
 
         match cmd {
             Command::Get(cmd) => {
-                get(store.clone(), cmd.key)?;
                 println!("GET");
-                con.writer.write_all(b"+OK\r\n").await?;
+                let bytes = get(store.clone(), cmd.key)?.unwrap();
+                let res: Vec<u8> = Frame::Bulk(bytes).into();
+                con.writer.write_all(&res).await?;
             }
             Command::Set(cmd) => {
                 println!("SET");
@@ -79,15 +81,10 @@ async fn handle_connection(stream: TcpStream, store: Arc<Mutex<Store>>) -> Resul
     Ok(())
 }
 
-fn get(store: Arc<Mutex<Store>>, key: String) -> Result<(), Error> {
+fn get(store: Arc<Mutex<Store>>, key: String) -> Result<Option<Bytes>, Error> {
     let store = store.lock().unwrap();
-
-    if let Some(value) = store.get(&key) {
-        println!("Found value: {:?}", value);
-    } else {
-        println!("Value not found");
-    }
-    Ok(())
+    let value = store.get(&key);
+    Ok(value.cloned())
 }
 
 fn set(store: Arc<Mutex<Store>>, key: String, value: Bytes) -> Result<(), Error> {
