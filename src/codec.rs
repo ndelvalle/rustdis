@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use std::io::Cursor;
 use tokio_util::codec::Decoder;
 
-use crate::frame::Frame;
+use crate::frame::{self, Frame};
 use crate::Error;
 
 pub struct FrameCodec;
@@ -18,12 +18,16 @@ impl Decoder for FrameCodec {
     // client from sending a large frame and causing the server to run out of memory.
     // * Read more here: https://docs.rs/tokio-util/latest/tokio_util/codec/index.html
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        if !Frame::can_parse(src) {
-            return Ok(None); // Not enough data to parse a frame.
-        }
+        // if !Frame::can_parse(src) {
+        //     return Ok(None); // Not enough data to parse a frame.
+        // }
 
         let mut cursor = Cursor::new(&src[..]);
-        let frame = Frame::parse(&mut cursor)?;
+        let frame = match Frame::parse(&mut cursor) {
+            Ok(frame) => frame,
+            Err(frame::Error::Incomplete) => return Ok(None), // Not enough data to parse a frame.
+            Err(err) => return Err(err.into()),
+        };
 
         let position: usize = cursor
             .position()
