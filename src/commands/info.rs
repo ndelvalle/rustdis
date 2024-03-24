@@ -57,7 +57,7 @@ db0:keys=397255,expires=845,avg_ttl=1527956522210785
 pub struct Info {}
 
 impl Info {
-    pub async fn apply(self) -> crate::Result<Frame> {
+    pub fn exec(self) -> crate::Result<Frame> {
         Ok(Frame::Bulk(Bytes::from(INFO)))
     }
 }

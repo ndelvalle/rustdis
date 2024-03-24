@@ -1,12 +1,26 @@
 use bytes::Bytes;
+use std::sync::{Arc, Mutex};
 
 use crate::commands::CommandParser;
+use crate::frame::Frame;
+use crate::store::Store;
 use crate::Error;
 
 #[derive(Debug, PartialEq)]
 pub struct Set {
     pub key: String,
     pub value: Bytes,
+}
+
+impl Set {
+    pub fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+        let mut store = store.lock().unwrap();
+
+        store.set(self.key, self.value);
+
+        let res = Frame::Simple("OK".to_string());
+        Ok(res)
+    }
 }
 
 impl TryFrom<&mut CommandParser> for Set {

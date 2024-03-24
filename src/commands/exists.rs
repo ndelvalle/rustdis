@@ -1,9 +1,16 @@
 use crate::commands::CommandParser;
+use crate::frame::Frame;
 use crate::Error;
 
 #[derive(Debug, PartialEq)]
 pub struct Exists {
     pub keys: Vec<String>,
+}
+
+impl Exists {
+    pub fn exec(self) -> Result<Frame, Error> {
+        Ok(Frame::Simple("OK".to_string()))
+    }
 }
 
 impl TryFrom<&mut CommandParser> for Exists {
