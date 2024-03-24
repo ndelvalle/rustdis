@@ -33,11 +33,6 @@ pub enum Frame {
 
 // Protocol specification: https://redis.io/docs/reference/protocol-spec/
 impl Frame {
-    // CRLF is the protocol's terminator, which always separates its parts.
-    pub fn can_parse(buffer: &[u8]) -> bool {
-        buffer.windows(2).any(|window| window == CRLF)
-    }
-
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Self, Error> {
         // The first byte in an RESP-serialized payload always identifies its type.
         // Subsequent bytes constitute the type's contents.
