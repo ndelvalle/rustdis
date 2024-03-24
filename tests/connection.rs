@@ -17,7 +17,7 @@ async fn create_tcp_connection() -> Result<(UnboundedSender<Vec<u8>>, TcpStream)
             while let Some(data) = rx.recv().await {
                 // Write the received channel data to the socket.
                 if socket.write_all(&data).await.is_err() {
-                    // Handle error (e.g., connection closed) and possibly exit the loop.
+                    // TODO: Handle error (e.g., connection closed) and possibly exit the loop.
                     break;
                 }
             }
