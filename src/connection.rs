@@ -15,7 +15,7 @@ pub struct Connection {
 impl Connection {
     pub fn new(stream: TcpStream) -> Connection {
         let (reader, writer) = stream.into_split();
-        let mut reader = FramedRead::new(reader, FrameCodec);
+        let reader = FramedRead::new(reader, FrameCodec);
 
         Connection { writer, reader }
     }
@@ -23,7 +23,7 @@ impl Connection {
     pub async fn read_frame(&mut self) -> Result<Option<Frame>> {
         match self.reader.next().await {
             Some(Ok(frame)) => Ok(Some(frame)),
-            Some(Err(e)) => Err(e.into()),
+            Some(Err(e)) => Err(e),
             None => Ok(None),
         }
     }

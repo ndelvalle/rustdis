@@ -10,10 +10,12 @@ pub mod set;
 pub mod type_;
 
 use bytes::Bytes;
+use std::sync::{Arc, Mutex};
 use std::{str, vec};
 use thiserror::Error as ThisError;
 
 use crate::frame::Frame;
+use crate::store::Store;
 use crate::Error;
 
 use client::Client;
@@ -39,6 +41,23 @@ pub enum Command {
     Exists(Exists),
     DBsize(DBSize),
     Type(Type),
+}
+
+impl Command {
+    pub fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+        match self {
+            Command::Get(cmd) => cmd.exec(store),
+            Command::Set(cmd) => cmd.exec(store),
+            Command::Info(cmd) => cmd.exec(),
+            Command::Client(cmd) => cmd.exec(),
+            Command::Module(cmd) => cmd.exec(),
+            Command::Command(cmd) => cmd.exec(),
+            Command::Config(cmd) => cmd.exec(),
+            Command::Exists(cmd) => cmd.exec(),
+            Command::DBsize(cmd) => cmd.exec(),
+            Command::Type(cmd) => cmd.exec(),
+        }
+    }
 }
 
 impl TryFrom<Frame> for Command {

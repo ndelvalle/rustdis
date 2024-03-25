@@ -6,6 +6,12 @@ pub struct Type {
     pub key: String,
 }
 
+impl Type {
+    pub fn exec(self) -> Result<crate::frame::Frame, Error> {
+        Ok(crate::frame::Frame::Simple("OK".to_string()))
+    }
+}
+
 impl TryFrom<&mut CommandParser> for Type {
     type Error = Error;
 
