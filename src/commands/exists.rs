@@ -1,5 +1,9 @@
+use std::sync::{Arc, Mutex};
+
+use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
+use crate::store::Store;
 use crate::Error;
 
 #[derive(Debug, PartialEq)]
@@ -7,8 +11,8 @@ pub struct Exists {
     pub keys: Vec<String>,
 }
 
-impl Exists {
-    pub fn exec(self) -> Result<Frame, Error> {
+impl Executable for Exists {
+    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         Ok(Frame::Simple("OK".to_string()))
     }
 }

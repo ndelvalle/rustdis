@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
 use crate::store::Store;
@@ -10,8 +11,8 @@ pub struct Get {
     pub key: String,
 }
 
-impl Get {
-    pub fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+impl Executable for Get {
+    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         let store = store.lock().unwrap();
         let value = store.get(&self.key);
 

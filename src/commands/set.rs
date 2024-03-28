@@ -1,6 +1,7 @@
 use bytes::Bytes;
 use std::sync::{Arc, Mutex};
 
+use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
 use crate::store::Store;
@@ -12,8 +13,8 @@ pub struct Set {
     pub value: Bytes,
 }
 
-impl Set {
-    pub fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+impl Executable for Set {
+    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         let mut store = store.lock().unwrap();
 
         store.set(self.key, self.value);
