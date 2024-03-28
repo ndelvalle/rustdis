@@ -8,6 +8,7 @@ pub mod info;
 pub mod module;
 pub mod set;
 pub mod type_;
+pub mod executable;
 
 use bytes::Bytes;
 use std::sync::{Arc, Mutex};
@@ -17,6 +18,7 @@ use thiserror::Error as ThisError;
 use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
+use crate::commands::executable::Executable;
 
 use client::Client;
 use command::Command as Foo;
@@ -48,14 +50,14 @@ impl Command {
         match self {
             Command::Get(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
-            Command::Info(cmd) => cmd.exec(),
-            Command::Client(cmd) => cmd.exec(),
-            Command::Module(cmd) => cmd.exec(),
-            Command::Command(cmd) => cmd.exec(),
-            Command::Config(cmd) => cmd.exec(),
-            Command::Exists(cmd) => cmd.exec(),
-            Command::DBsize(cmd) => cmd.exec(),
-            Command::Type(cmd) => cmd.exec(),
+            Command::Info(cmd) => cmd.exec(store),
+            Command::Client(cmd) => cmd.exec(store),
+            Command::Module(cmd) => cmd.exec(store),
+            Command::Command(cmd) => cmd.exec(store),
+            Command::Config(cmd) => cmd.exec(store),
+            Command::Exists(cmd) => cmd.exec(store),
+            Command::DBsize(cmd) => cmd.exec(store),
+            Command::Type(cmd) => cmd.exec(store),
         }
     }
 }

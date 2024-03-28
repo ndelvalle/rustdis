@@ -1,7 +1,10 @@
 use bytes::Bytes;
+use std::sync::{Arc, Mutex};
 
+use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
+use crate::store::Store;
 use crate::Error;
 
 const INFO: &str = r#"
@@ -54,10 +57,10 @@ db0:keys=397255,expires=845,avg_ttl=1527956522210785
 "#;
 
 #[derive(Debug, PartialEq)]
-pub struct Info {}
+pub struct Info;
 
-impl Info {
-    pub fn exec(self) -> crate::Result<Frame> {
+impl Executable for Info {
+    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         Ok(Frame::Bulk(Bytes::from(INFO)))
     }
 }
@@ -65,7 +68,7 @@ impl Info {
 impl TryFrom<&mut CommandParser> for Info {
     type Error = Error;
 
-    fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
-        Ok(Self {})
+    fn try_from(_parser: &mut CommandParser) -> Result<Self, Self::Error> {
+        Ok(Self)
     }
 }
