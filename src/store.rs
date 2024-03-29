@@ -20,3 +20,9 @@ impl Store {
         self.store.get(key)
     }
 }
+
+impl Default for Store {
+    fn default() -> Self {
+        Self::new()
+    }
+}

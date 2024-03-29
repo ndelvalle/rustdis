@@ -80,7 +80,7 @@ impl TryFrom<Frame> for Command {
             "command" => Foo::try_from(&mut parser).map(Command::Command),
             "config" => Config::try_from(&mut parser).map(Command::Config),
             "type" => Type::try_from(&mut parser).map(Command::Type),
-            name => return Err(format!("protocol error; unknown command {:?}", name).into()),
+            name => Err(format!("protocol error; unknown command {:?}", name).into()),
         }
     }
 }
