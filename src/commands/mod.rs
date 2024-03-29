@@ -45,8 +45,8 @@ pub enum Command {
     Type(Type),
 }
 
-impl Command {
-    pub fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+impl Executable for Command {
+    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         match self {
             Command::Get(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
