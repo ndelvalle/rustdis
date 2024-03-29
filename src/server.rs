@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::commands::executable::Executable;
 use crate::commands::Command;
 use crate::connection::Connection;
 use crate::store::Store;
 use crate::Error;
-use crate::commands::executable::Executable;
 
 pub async fn run() -> Result<(), Error> {
     let listener = TcpListener::bind("127.0.0.1:6379").await?;

@@ -2,23 +2,23 @@ pub mod client;
 pub mod command;
 pub mod config;
 pub mod dbsize;
+pub mod executable;
 pub mod exists;
 pub mod get;
 pub mod info;
 pub mod module;
 pub mod set;
 pub mod type_;
-pub mod executable;
 
 use bytes::Bytes;
 use std::sync::{Arc, Mutex};
 use std::{str, vec};
 use thiserror::Error as ThisError;
 
+use crate::commands::executable::Executable;
 use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
-use crate::commands::executable::Executable;
 
 use client::Client;
 use command::Command as Foo;
