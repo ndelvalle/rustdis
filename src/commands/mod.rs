@@ -66,20 +66,34 @@ impl TryFrom<Frame> for Command {
     type Error = Error;
 
     fn try_from(frame: Frame) -> Result<Self, Self::Error> {
-        let mut parser = CommandParser::try_from(frame)?;
+        // Clients send commands to the Redis server as RESP arrays.
+        let frames = match frame {
+            Frame::Array(array) => array,
+            frame => {
+                return Err(Box::new(CommandParserError::InvalidFrame {
+                    expected: "array".to_string(),
+                    actual: frame,
+                }))
+            }
+        };
+
+        let parser = &mut CommandParser {
+            parts: frames.into_iter(),
+        };
+
         let command_name = parser.parse_command_name()?;
 
         match &command_name[..] {
-            "get" => Get::try_from(&mut parser).map(Command::Get),
-            "set" => Set::try_from(&mut parser).map(Command::Set),
-            "exists" => Exists::try_from(&mut parser).map(Command::Exists),
-            "dbsize" => DBSize::try_from(&mut parser).map(Command::DBsize),
-            "info" => Info::try_from(&mut parser).map(Command::Info),
-            "client" => Client::try_from(&mut parser).map(Command::Client),
-            "module" => Module::try_from(&mut parser).map(Command::Module),
-            "command" => Foo::try_from(&mut parser).map(Command::Command),
-            "config" => Config::try_from(&mut parser).map(Command::Config),
-            "type" => Type::try_from(&mut parser).map(Command::Type),
+            "get" => Get::try_from(parser).map(Command::Get),
+            "set" => Set::try_from(parser).map(Command::Set),
+            "exists" => Exists::try_from(parser).map(Command::Exists),
+            "dbsize" => DBSize::try_from(parser).map(Command::DBsize),
+            "info" => Info::try_from(parser).map(Command::Info),
+            "client" => Client::try_from(parser).map(Command::Client),
+            "module" => Module::try_from(parser).map(Command::Module),
+            "command" => Foo::try_from(parser).map(Command::Command),
+            "config" => Config::try_from(parser).map(Command::Config),
+            "type" => Type::try_from(parser).map(Command::Type),
             name => Err(format!("protocol error; unknown command {:?}", name).into()),
         }
     }
@@ -147,7 +161,7 @@ impl CommandParser {
     }
 }
 
-#[derive(Debug, ThisError)]
+#[derive(Debug, ThisError, PartialEq)]
 pub(crate) enum CommandParserError {
     #[error("protocol error; invalid frame, expected {expected}, got {actual}")]
     InvalidFrame { expected: String, actual: Frame },
@@ -155,27 +169,6 @@ pub(crate) enum CommandParserError {
     InvalidUTF8String(#[from] str::Utf8Error),
     #[error("protocol error; attempting to extract a value failed due to the frame being fully consumed")]
     EndOfStream,
-}
-
-impl TryFrom<Frame> for CommandParser {
-    type Error = CommandParserError;
-
-    fn try_from(frame: Frame) -> Result<Self, Self::Error> {
-        // Clients send commands to the Redis server as RESP arrays.
-        let frames = match frame {
-            Frame::Array(array) => array,
-            frame => {
-                return Err(CommandParserError::InvalidFrame {
-                    expected: "array".to_string(),
-                    actual: frame,
-                })
-            }
-        };
-
-        Ok(Self {
-            parts: frames.into_iter(),
-        })
-    }
 }
 
 #[cfg(test)]

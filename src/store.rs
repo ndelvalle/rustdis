@@ -19,6 +19,10 @@ impl Store {
     pub fn get(&self, key: &str) -> Option<&Bytes> {
         self.store.get(key)
     }
+
+    pub fn exists(&self, key: &str) -> bool {
+        self.store.contains_key(key)
+    }
 }
 
 impl Default for Store {
