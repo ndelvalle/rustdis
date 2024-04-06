@@ -20,6 +20,10 @@ impl Store {
         self.store.get(key)
     }
 
+    pub fn remove(&mut self, key: &str) -> Option<Bytes> {
+        self.store.remove(key)
+    }
+
     pub fn exists(&self, key: &str) -> bool {
         self.store.contains_key(key)
     }
