@@ -27,6 +27,10 @@ impl Store {
     pub fn exists(&self, key: &str) -> bool {
         self.store.contains_key(key)
     }
+
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.store.keys()
+    }
 }
 
 impl Default for Store {
