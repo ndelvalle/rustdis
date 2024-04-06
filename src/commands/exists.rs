@@ -14,14 +14,9 @@ pub struct Exists {
 
 impl Executable for Exists {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut count = 0;
         let store = store.lock().unwrap();
-        for key in self.keys {
-            if store.exists(&key) {
-                count += 1;
-            }
-        }
-        Ok(Frame::Integer(count))
+        let count = self.keys.iter().filter(|key| store.exists(key)).count();
+        Ok(Frame::Integer(count as i64))
     }
 }
 

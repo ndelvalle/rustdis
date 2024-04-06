@@ -17,19 +17,14 @@ pub struct Keys {
 
 impl Executable for Keys {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut res = vec![];
-
         let store = store.lock().unwrap();
-        for key in store.keys() {
-            let matches_pattern =
-                glob_match(self.pattern.as_str(), "some/path/a/to/the/needle.txt");
+        let matching_keys: Vec<Frame> = store
+            .keys()
+            .filter(|key| glob_match(self.pattern.as_str(), key))
+            .map(|key| Frame::Bulk(Bytes::from(key.to_string())))
+            .collect();
 
-            if matches_pattern {
-                res.push(Frame::Bulk(Bytes::from(key.to_string())));
-            }
-        }
-
-        Ok(Frame::Array(vec![]))
+        Ok(Frame::Array(matching_keys))
     }
 }
 
@@ -44,11 +39,9 @@ impl TryFrom<&mut CommandParser> for Keys {
 
 #[cfg(test)]
 mod tests {
-    use bytes::Bytes;
-
-    use crate::commands::{Command, CommandParserError};
-
     use super::*;
+    use crate::commands::{Command, CommandParserError};
+    use bytes::Bytes;
 
     #[test]
     fn with_wildcard_pattern() {
@@ -57,12 +50,30 @@ mod tests {
             Frame::Bulk(Bytes::from("*")),
         ]);
         let cmd = Command::try_from(frame).unwrap();
+
         assert_eq!(
             cmd,
             Command::Keys(Keys {
                 pattern: String::from("*")
             })
         );
+
+        let store = Arc::new(Mutex::new(Store::new()));
+        {
+            let mut store = store.lock().unwrap();
+            store.set(String::from("key1"), Bytes::from("1"));
+            store.set(String::from("key2"), Bytes::from("2"));
+            store.set(String::from("key3"), Bytes::from("3"));
+        }
+
+        // TODO: Properly test the result matches the expected keys.
+        let result = cmd.exec(store.clone()).unwrap();
+        let result = match result {
+            Frame::Array(vec) => vec,
+            _ => panic!("Expected Frame::Array but found another variant."),
+        };
+
+        assert_eq!(result.len(), 3);
     }
 
     #[test]
