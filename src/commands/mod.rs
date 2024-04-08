@@ -2,10 +2,12 @@ pub mod client;
 pub mod command;
 pub mod config;
 pub mod dbsize;
+pub mod del;
 pub mod executable;
 pub mod exists;
 pub mod get;
 pub mod info;
+pub mod keys;
 pub mod module;
 pub mod set;
 pub mod type_;
@@ -24,9 +26,11 @@ use client::Client;
 use command::Command as Foo;
 use config::Config;
 use dbsize::DBSize;
+use del::Del;
 use exists::Exists;
 use get::Get;
 use info::Info;
+use keys::Keys;
 use module::Module;
 use set::Set;
 use type_::Type;
@@ -35,6 +39,8 @@ use type_::Type;
 pub enum Command {
     Get(Get),
     Set(Set),
+    Del(Del),
+    Keys(Keys),
     Info(Info),
     Client(Client),
     Module(Module),
@@ -50,6 +56,8 @@ impl Executable for Command {
         match self {
             Command::Get(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
+            Command::Del(cmd) => cmd.exec(store),
+            Command::Keys(cmd) => cmd.exec(store),
             Command::Info(cmd) => cmd.exec(store),
             Command::Client(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
@@ -86,6 +94,8 @@ impl TryFrom<Frame> for Command {
         match &command_name[..] {
             "get" => Get::try_from(parser).map(Command::Get),
             "set" => Set::try_from(parser).map(Command::Set),
+            "del" => Del::try_from(parser).map(Command::Del),
+            "keys" => Keys::try_from(parser).map(Command::Keys),
             "exists" => Exists::try_from(parser).map(Command::Exists),
             "dbsize" => DBSize::try_from(parser).map(Command::DBsize),
             "info" => Info::try_from(parser).map(Command::Info),
