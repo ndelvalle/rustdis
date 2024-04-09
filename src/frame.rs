@@ -21,7 +21,7 @@ pub enum Error {
     Other(crate::Error),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Frame {
     Simple(String),
     Error(String),
