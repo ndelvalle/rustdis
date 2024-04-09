@@ -31,6 +31,10 @@ impl Store {
     pub fn keys(&self) -> impl Iterator<Item = &String> {
         self.store.keys()
     }
+
+    pub fn size(&self) -> usize {
+        self.store.len()
+    }
 }
 
 impl Default for Store {
