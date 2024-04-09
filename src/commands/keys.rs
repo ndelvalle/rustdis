@@ -66,14 +66,23 @@ mod tests {
             store.set(String::from("key3"), Bytes::from("3"));
         }
 
-        // TODO: Properly test the result matches the expected keys.
         let result = cmd.exec(store.clone()).unwrap();
         let result = match result {
-            Frame::Array(vec) => vec,
-            _ => panic!("Expected Frame::Array but found another variant."),
+            Frame::Array(mut vec) => {
+                vec.sort();
+                Frame::Array(vec)
+            }
+            f => f,
         };
 
-        assert_eq!(result.len(), 3);
+        assert_eq!(
+            result,
+            Frame::Array(vec![
+                Frame::Bulk(Bytes::from("key1")),
+                Frame::Bulk(Bytes::from("key2")),
+                Frame::Bulk(Bytes::from("key3")),
+            ])
+        );
     }
 
     #[test]
