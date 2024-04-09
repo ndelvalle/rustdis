@@ -31,3 +31,58 @@ impl TryFrom<&mut CommandParser> for Get {
         Ok(Self { key })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::Command;
+    use bytes::Bytes;
+
+    #[test]
+    fn existing_key() {
+        let frame = Frame::Array(vec![
+            Frame::Bulk(Bytes::from("GET")),
+            Frame::Bulk(Bytes::from("key1")),
+        ]);
+        let cmd = Command::try_from(frame).unwrap();
+
+        assert_eq!(
+            cmd,
+            Command::Get(Get {
+                key: String::from("key1")
+            })
+        );
+
+        let store = Arc::new(Mutex::new(Store::new()));
+        {
+            let mut store = store.lock().unwrap();
+            store.set(String::from("key1"), Bytes::from("1"));
+        }
+
+        let result = cmd.exec(store.clone()).unwrap();
+
+        assert_eq!(result, Frame::Bulk(Bytes::from("1")));
+    }
+
+    #[test]
+    fn missing_key() {
+        let frame = Frame::Array(vec![
+            Frame::Bulk(Bytes::from("GET")),
+            Frame::Bulk(Bytes::from("key1")),
+        ]);
+        let cmd = Command::try_from(frame).unwrap();
+
+        assert_eq!(
+            cmd,
+            Command::Get(Get {
+                key: String::from("key1")
+            })
+        );
+
+        let store = Arc::new(Mutex::new(Store::new()));
+
+        let result = cmd.exec(store.clone()).unwrap();
+
+        assert_eq!(result, Frame::Null);
+    }
+}

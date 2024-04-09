@@ -34,3 +34,64 @@ impl TryFrom<&mut CommandParser> for Set {
         Ok(Self { key, value })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::Command;
+    use bytes::Bytes;
+
+    #[test]
+    fn insert_one() {
+        let frame = Frame::Array(vec![
+            Frame::Bulk(Bytes::from("SET")),
+            Frame::Bulk(Bytes::from("key1")),
+            Frame::Bulk(Bytes::from("1")),
+        ]);
+        let cmd = Command::try_from(frame).unwrap();
+
+        assert_eq!(
+            cmd,
+            Command::Set(Set {
+                key: String::from("key1"),
+                value: Bytes::from("1")
+            })
+        );
+
+        let store = Arc::new(Mutex::new(Store::new()));
+
+        cmd.exec(store.clone()).unwrap();
+
+        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
+    }
+
+    #[test]
+    fn overwrite_existing() {
+        let frame = Frame::Array(vec![
+            Frame::Bulk(Bytes::from("SET")),
+            Frame::Bulk(Bytes::from("key1")),
+            Frame::Bulk(Bytes::from("2")),
+        ]);
+        let cmd = Command::try_from(frame).unwrap();
+
+        assert_eq!(
+            cmd,
+            Command::Set(Set {
+                key: String::from("key1"),
+                value: Bytes::from("2")
+            })
+        );
+
+        let store = Arc::new(Mutex::new(Store::new()));
+        {
+            let mut store = store.lock().unwrap();
+            store.set(String::from("key1"), Bytes::from("1"));
+        }
+
+        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
+
+        cmd.exec(store.clone()).unwrap();
+
+        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("2")));
+    }
+}
