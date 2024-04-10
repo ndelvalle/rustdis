@@ -7,6 +7,9 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
+/// Set `key` to hold the `string` value. If `key` already holds a value, it is overwritten.
+///
+/// Ref: <https://redis.io/docs/latest/commands/set/>
 #[derive(Debug, PartialEq)]
 pub struct Set {
     pub key: String,

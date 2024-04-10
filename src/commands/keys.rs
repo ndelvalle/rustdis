@@ -9,7 +9,11 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
-// https://redis.io/commands/keys
+/// Return all keys matching `pattern`.
+///
+/// Uses [glob-match](https://github.com/devongovett/glob-match) to match the `pattern`.
+///
+/// Ref: <https://redis.io/commands/keys>
 #[derive(Debug, PartialEq)]
 pub struct Keys {
     pub pattern: String,

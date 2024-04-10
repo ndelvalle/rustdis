@@ -6,6 +6,9 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
+/// Get the value of `key`. If the key does not exist the special value `nil` is returned.
+///
+/// Ref: <https://redis.io/docs/latest/commands/get/>
 #[derive(Debug, PartialEq)]
 pub struct Get {
     pub key: String,
