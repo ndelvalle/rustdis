@@ -6,6 +6,11 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
+/// Module management commands.
+///
+/// **NOTE**: not implemented !!!
+///
+/// Ref: <https://redis.io/docs/latest/commands/module/>
 #[derive(Debug, PartialEq)]
 pub struct Module;
 

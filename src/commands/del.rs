@@ -6,7 +6,11 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
-// https://redis.io/commands/del
+/// Removes the specified `keys`.
+///
+/// Returns the number of keys that were removed.
+///
+/// Ref: <https://redis.io/docs/latest/commands/del/>
 #[derive(Debug, PartialEq)]
 pub struct Del {
     pub keys: Vec<String>,

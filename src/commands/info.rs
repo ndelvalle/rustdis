@@ -56,6 +56,11 @@ cluster_enabled:0
 db0:keys=397255,expires=845,avg_ttl=1527956522210785
 "#;
 
+/// Returns information and statistics about the server.
+///
+/// **NOTE**: returns a mock response.
+///
+/// Ref: <https://redis.io/docs/latest/commands/info/>
 #[derive(Debug, PartialEq)]
 pub struct Info;
 

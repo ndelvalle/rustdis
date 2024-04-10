@@ -7,6 +7,11 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
+/// Returns if `key` exists.
+///
+/// Keys are counted as many times as mentioned in the input.
+///
+/// Ref: <https://redis.io/docs/latest/commands/exists/>
 #[derive(Debug, PartialEq)]
 pub struct Exists {
     pub keys: Vec<String>,
