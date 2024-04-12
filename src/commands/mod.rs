@@ -9,6 +9,8 @@ pub mod get;
 pub mod info;
 pub mod keys;
 pub mod module;
+pub mod ping;
+pub mod select;
 pub mod set;
 pub mod type_;
 
@@ -23,7 +25,7 @@ use crate::store::Store;
 use crate::Error;
 
 use client::Client;
-use command::Command as Foo;
+use command::Command as Command_;
 use config::Config;
 use dbsize::DBSize;
 use del::Del;
@@ -32,39 +34,46 @@ use get::Get;
 use info::Info;
 use keys::Keys;
 use module::Module;
+use ping::Ping;
+use select::Select;
 use set::Set;
 use type_::Type;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
-    Get(Get),
-    Set(Set),
-    Del(Del),
-    Keys(Keys),
-    Info(Info),
-    Client(Client),
-    Module(Module),
-    Command(Foo),
-    Config(Config),
-    Exists(Exists),
     DBsize(DBSize),
+    Del(Del),
+    Exists(Exists),
+    Get(Get),
+    Keys(Keys),
+    Set(Set),
     Type(Type),
+
+    Client(Client),
+    Command(Command_),
+    Config(Config),
+    Info(Info),
+    Module(Module),
+    Ping(Ping),
+    Select(Select),
 }
 
 impl Executable for Command {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         match self {
-            Command::Get(cmd) => cmd.exec(store),
-            Command::Set(cmd) => cmd.exec(store),
-            Command::Del(cmd) => cmd.exec(store),
-            Command::Keys(cmd) => cmd.exec(store),
-            Command::Info(cmd) => cmd.exec(store),
             Command::Client(cmd) => cmd.exec(store),
-            Command::Module(cmd) => cmd.exec(store),
             Command::Command(cmd) => cmd.exec(store),
             Command::Config(cmd) => cmd.exec(store),
-            Command::Exists(cmd) => cmd.exec(store),
             Command::DBsize(cmd) => cmd.exec(store),
+            Command::Del(cmd) => cmd.exec(store),
+            Command::Exists(cmd) => cmd.exec(store),
+            Command::Get(cmd) => cmd.exec(store),
+            Command::Info(cmd) => cmd.exec(store),
+            Command::Keys(cmd) => cmd.exec(store),
+            Command::Module(cmd) => cmd.exec(store),
+            Command::Ping(cmd) => cmd.exec(store),
+            Command::Select(cmd) => cmd.exec(store),
+            Command::Set(cmd) => cmd.exec(store),
             Command::Type(cmd) => cmd.exec(store),
         }
     }
@@ -92,17 +101,19 @@ impl TryFrom<Frame> for Command {
         let command_name = parser.parse_command_name()?;
 
         match &command_name[..] {
-            "get" => Get::try_from(parser).map(Command::Get),
-            "set" => Set::try_from(parser).map(Command::Set),
-            "del" => Del::try_from(parser).map(Command::Del),
-            "keys" => Keys::try_from(parser).map(Command::Keys),
-            "exists" => Exists::try_from(parser).map(Command::Exists),
-            "dbsize" => DBSize::try_from(parser).map(Command::DBsize),
-            "info" => Info::try_from(parser).map(Command::Info),
             "client" => Client::try_from(parser).map(Command::Client),
-            "module" => Module::try_from(parser).map(Command::Module),
-            "command" => Foo::try_from(parser).map(Command::Command),
+            "command" => Command_::try_from(parser).map(Command::Command),
             "config" => Config::try_from(parser).map(Command::Config),
+            "dbsize" => DBSize::try_from(parser).map(Command::DBsize),
+            "del" => Del::try_from(parser).map(Command::Del),
+            "exists" => Exists::try_from(parser).map(Command::Exists),
+            "get" => Get::try_from(parser).map(Command::Get),
+            "info" => Info::try_from(parser).map(Command::Info),
+            "keys" => Keys::try_from(parser).map(Command::Keys),
+            "module" => Module::try_from(parser).map(Command::Module),
+            "ping" => Ping::try_from(parser).map(Command::Ping),
+            "select" => Select::try_from(parser).map(Command::Select),
+            "set" => Set::try_from(parser).map(Command::Set),
             "type" => Type::try_from(parser).map(Command::Type),
             name => Err(format!("protocol error; unknown command {:?}", name).into()),
         }
@@ -147,6 +158,21 @@ impl CommandParser {
                 .map_err(CommandParserError::InvalidUTF8String),
             frame => Err(CommandParserError::InvalidFrame {
                 expected: "simple or bulk string".to_string(),
+                actual: frame,
+            }),
+        }
+    }
+
+    fn next_integer(&mut self) -> Result<i64, CommandParserError> {
+        let frame = self
+            .parts
+            .next()
+            .ok_or_else(|| CommandParserError::EndOfStream)?;
+
+        match frame {
+            Frame::Integer(i) => Ok(i),
+            frame => Err(CommandParserError::InvalidFrame {
+                expected: "integer".to_string(),
                 actual: frame,
             }),
         }
