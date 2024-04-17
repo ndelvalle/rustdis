@@ -35,6 +35,10 @@ impl Store {
     pub fn size(&self) -> usize {
         self.store.len()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Bytes)> {
+        self.store.iter()
+    }
 }
 
 impl Default for Store {
