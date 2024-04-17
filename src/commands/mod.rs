@@ -10,6 +10,7 @@ pub mod info;
 pub mod keys;
 pub mod module;
 pub mod ping;
+pub mod scan;
 pub mod select;
 pub mod set;
 pub mod type_;
@@ -35,6 +36,7 @@ use info::Info;
 use keys::Keys;
 use module::Module;
 use ping::Ping;
+use scan::Scan;
 use select::Select;
 use set::Set;
 use type_::Type;
@@ -46,6 +48,7 @@ pub enum Command {
     Exists(Exists),
     Get(Get),
     Keys(Keys),
+    Scan(Scan),
     Set(Set),
     Type(Type),
 
@@ -72,6 +75,7 @@ impl Executable for Command {
             Command::Keys(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
+            Command::Scan(cmd) => cmd.exec(store),
             Command::Select(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
             Command::Type(cmd) => cmd.exec(store),
@@ -112,6 +116,7 @@ impl TryFrom<Frame> for Command {
             "keys" => Keys::try_from(parser).map(Command::Keys),
             "module" => Module::try_from(parser).map(Command::Module),
             "ping" => Ping::try_from(parser).map(Command::Ping),
+            "scan" => Scan::try_from(parser).map(Command::Scan),
             "select" => Select::try_from(parser).map(Command::Select),
             "set" => Set::try_from(parser).map(Command::Set),
             "type" => Type::try_from(parser).map(Command::Type),
@@ -163,7 +168,7 @@ impl CommandParser {
         }
     }
 
-    fn _next_integer(&mut self) -> Result<i64, CommandParserError> {
+    fn next_integer(&mut self) -> Result<i64, CommandParserError> {
         let frame = self
             .parts
             .next()
