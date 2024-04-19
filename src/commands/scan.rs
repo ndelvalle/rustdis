@@ -19,8 +19,7 @@ pub struct Scan {
 
 impl Executable for Scan {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut store = store.lock().unwrap();
-        // let iter = store.iter();
+        let store = store.lock().unwrap();
 
         let next_cursor = Frame::Bulk(Bytes::from("0"));
         let keys: Vec<Frame> = store
