@@ -9,10 +9,12 @@ pub mod get;
 pub mod info;
 pub mod keys;
 pub mod module;
+pub mod object;
 pub mod ping;
 pub mod scan;
 pub mod select;
 pub mod set;
+pub mod ttl;
 pub mod type_;
 
 use bytes::Bytes;
@@ -35,10 +37,12 @@ use get::Get;
 use info::Info;
 use keys::Keys;
 use module::Module;
+use object::Object;
 use ping::Ping;
 use scan::Scan;
 use select::Select;
 use set::Set;
+use ttl::Ttl;
 use type_::Type;
 
 #[derive(Debug, PartialEq)]
@@ -48,8 +52,10 @@ pub enum Command {
     Exists(Exists),
     Get(Get),
     Keys(Keys),
+    Object(Object),
     Scan(Scan),
     Set(Set),
+    Ttl(Ttl),
     Type(Type),
 
     Client(Client),
@@ -74,10 +80,12 @@ impl Executable for Command {
             Command::Info(cmd) => cmd.exec(store),
             Command::Keys(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
+            Command::Object(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
             Command::Scan(cmd) => cmd.exec(store),
             Command::Select(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
+            Command::Ttl(cmd) => cmd.exec(store),
             Command::Type(cmd) => cmd.exec(store),
         }
     }
@@ -91,10 +99,11 @@ impl TryFrom<Frame> for Command {
         let frames = match frame {
             Frame::Array(array) => array,
             frame => {
-                return Err(Box::new(CommandParserError::InvalidFrame {
+                return Err(CommandParserError::InvalidFrame {
                     expected: "array".to_string(),
                     actual: frame,
-                }))
+                }
+                .into())
             }
         };
 
@@ -115,10 +124,12 @@ impl TryFrom<Frame> for Command {
             "info" => Info::try_from(parser).map(Command::Info),
             "keys" => Keys::try_from(parser).map(Command::Keys),
             "module" => Module::try_from(parser).map(Command::Module),
+            "object" => Object::try_from(parser).map(Command::Object),
             "ping" => Ping::try_from(parser).map(Command::Ping),
             "scan" => Scan::try_from(parser).map(Command::Scan),
             "select" => Select::try_from(parser).map(Command::Select),
             "set" => Set::try_from(parser).map(Command::Set),
+            "ttl" => Ttl::try_from(parser).map(Command::Ttl),
             "type" => Type::try_from(parser).map(Command::Type),
             name => Err(format!("protocol error; unknown command {:?}", name).into()),
         }

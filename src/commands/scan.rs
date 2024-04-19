@@ -20,8 +20,16 @@ pub struct Scan {
 impl Executable for Scan {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         let mut store = store.lock().unwrap();
+        // let iter = store.iter();
 
-        let res = Frame::Bulk(Bytes::from("0"));
+        let next_cursor = Frame::Bulk(Bytes::from("0"));
+        let keys: Vec<Frame> = store
+            .keys()
+            .map(|key| Frame::Bulk(Bytes::from(key.clone())))
+            .collect();
+        let keys = Frame::Array(keys);
+
+        let res = Frame::Array(vec![next_cursor, keys]);
         Ok(res)
     }
 }
@@ -33,6 +41,7 @@ impl TryFrom<&mut CommandParser> for Scan {
         let cursor = parser.next_bytes()?;
         let cursor = str::from_utf8(&cursor[..]).unwrap();
         let cursor = cursor.parse::<i64>().unwrap();
+
         Ok(Self { cursor })
     }
 }
