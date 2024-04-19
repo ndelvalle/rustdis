@@ -8,6 +8,7 @@ pub mod exists;
 pub mod get;
 pub mod info;
 pub mod keys;
+pub mod memory;
 pub mod module;
 pub mod object;
 pub mod ping;
@@ -36,6 +37,7 @@ use exists::Exists;
 use get::Get;
 use info::Info;
 use keys::Keys;
+use memory::Memory;
 use module::Module;
 use object::Object;
 use ping::Ping;
@@ -52,6 +54,7 @@ pub enum Command {
     Exists(Exists),
     Get(Get),
     Keys(Keys),
+    Memory(Memory),
     Object(Object),
     Scan(Scan),
     Set(Set),
@@ -79,6 +82,7 @@ impl Executable for Command {
             Command::Get(cmd) => cmd.exec(store),
             Command::Info(cmd) => cmd.exec(store),
             Command::Keys(cmd) => cmd.exec(store),
+            Command::Memory(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
             Command::Object(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
@@ -123,6 +127,7 @@ impl TryFrom<Frame> for Command {
             "get" => Get::try_from(parser).map(Command::Get),
             "info" => Info::try_from(parser).map(Command::Info),
             "keys" => Keys::try_from(parser).map(Command::Keys),
+            "memory" => Memory::try_from(parser).map(Command::Memory),
             "module" => Module::try_from(parser).map(Command::Module),
             "object" => Object::try_from(parser).map(Command::Object),
             "ping" => Ping::try_from(parser).map(Command::Ping),
@@ -131,7 +136,10 @@ impl TryFrom<Frame> for Command {
             "set" => Set::try_from(parser).map(Command::Set),
             "ttl" => Ttl::try_from(parser).map(Command::Ttl),
             "type" => Type::try_from(parser).map(Command::Type),
-            name => Err(format!("protocol error; unknown command {:?}", name).into()),
+            _ => Err(CommandParserError::UnknownCommand {
+                command: command_name,
+            }
+            .into()),
         }
     }
 }
@@ -217,6 +225,8 @@ impl CommandParser {
 pub(crate) enum CommandParserError {
     #[error("protocol error; invalid frame, expected {expected}, got {actual}")]
     InvalidFrame { expected: String, actual: Frame },
+    #[error("protocol error; unknown command {command}")]
+    UnknownCommand { command: String },
     #[error("protocol error; invalid UTF-8 string")]
     InvalidUTF8String(#[from] str::Utf8Error),
     #[error("protocol error; attempting to extract a value failed due to the frame being fully consumed")]
