@@ -179,7 +179,7 @@ impl CommandParser {
         }
     }
 
-    fn next_integer(&mut self) -> Result<i64, CommandParserError> {
+    fn _next_integer(&mut self) -> Result<i64, CommandParserError> {
         let frame = self
             .parts
             .next()
