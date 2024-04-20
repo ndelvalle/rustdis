@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use crate::commands::executable::Executable;
 use crate::commands::Command;
@@ -28,13 +28,17 @@ pub async fn run() -> Result<(), Error> {
 
         tokio::spawn(async move {
             if let Err(e) = handle_connection(socket, client_address, store).await {
-                println!("Error: {}", e);
+                error!(e);
             }
         });
     }
 }
 
-#[instrument(name = "connection", skip(stream, store), fields(connection_id))]
+#[instrument(
+    name = "connection",
+    skip(stream, store),
+    fields(connection_id, client_address)
+)]
 async fn handle_connection(
     stream: TcpStream,
     client_address: SocketAddr,
@@ -42,16 +46,20 @@ async fn handle_connection(
 ) -> Result<(), Error> {
     let mut conn = Connection::new(stream, client_address);
 
-    tracing::Span::current().record("connection_id", conn.id.to_string());
+    tracing::Span::current()
+        .record("connection_id", conn.id.to_string())
+        .record("client_address", client_address.to_string());
 
     while let Some(frame) = conn.read_frame().await? {
-        info!("Received frame: {:?}", frame);
+        info!("Received frame from client: {:?}", frame);
         let cmd = Command::try_from(frame)?;
         let res = cmd.exec(store.clone())?;
+        info!("Sending response to client: {:?}", res);
         let res: Vec<u8> = res.into();
 
         conn.writer.write_all(&res).await?;
     }
 
+    info!("Connection closed");
     Ok(())
 }

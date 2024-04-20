@@ -7,6 +7,7 @@ use bytes::Bytes;
 use std::io::Cursor;
 use std::string::FromUtf8Error;
 use thiserror::Error as ThisError;
+use tracing::error;
 
 static CRLF: &[u8; 2] = b"\r\n";
 
@@ -125,7 +126,7 @@ impl Frame {
                 Ok(Frame::Null)
             }
             data_type => {
-                println!("Unsupported data type: {:?}", data_type);
+                error!("Unsupported data type: {:?}", data_type);
                 todo!()
             }
         }
