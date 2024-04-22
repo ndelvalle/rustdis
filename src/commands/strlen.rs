@@ -6,27 +6,28 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
-/// Get the value of `key`. If the key does not exist the special value `nil` is returned.
+/// Returns the length of the string value stored at key. An error is returned when key holds a
+/// non-string value.
 ///
-/// Ref: <https://redis.io/docs/latest/commands/get/>
+/// Ref: <https://redis.io/docs/latest/commands/strlen/>
 #[derive(Debug, PartialEq)]
-pub struct Get {
+pub struct Strlen {
     pub key: String,
 }
 
-impl Executable for Get {
+impl Executable for Strlen {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         let store = store.lock().unwrap();
         let value = store.get(&self.key);
 
         match value {
-            Some(value) => Ok(Frame::Bulk(value.clone())),
-            None => Ok(Frame::Null),
+            Some(value) => Ok(Frame::Integer(value.len() as i64)),
+            None => Ok(Frame::Integer(0)),
         }
     }
 }
 
-impl TryFrom<&mut CommandParser> for Get {
+impl TryFrom<&mut CommandParser> for Strlen {
     type Error = Error;
 
     fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
@@ -46,14 +47,14 @@ mod tests {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
-            Frame::Bulk(Bytes::from("GET")),
+            Frame::Bulk(Bytes::from("STRLEN")),
             Frame::Bulk(Bytes::from("key1")),
         ]);
         let cmd = Command::try_from(frame).unwrap();
 
         assert_eq!(
             cmd,
-            Command::Get(Get {
+            Command::Strlen(Strlen {
                 key: String::from("key1")
             })
         );
@@ -61,11 +62,11 @@ mod tests {
         store
             .lock()
             .unwrap()
-            .set(String::from("key1"), Bytes::from("1"));
+            .set(String::from("key1"), Bytes::from("Hello world"));
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Bulk(Bytes::from("1")));
+        assert_eq!(result, Frame::Integer(11));
     }
 
     #[test]
@@ -73,20 +74,20 @@ mod tests {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
-            Frame::Bulk(Bytes::from("GET")),
+            Frame::Bulk(Bytes::from("STRLEN")),
             Frame::Bulk(Bytes::from("key1")),
         ]);
         let cmd = Command::try_from(frame).unwrap();
 
         assert_eq!(
             cmd,
-            Command::Get(Get {
+            Command::Strlen(Strlen {
                 key: String::from("key1")
             })
         );
 
         let res = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(res, Frame::Null);
+        assert_eq!(res, Frame::Integer(0));
     }
 }

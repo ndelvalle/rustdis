@@ -33,7 +33,8 @@ async fn create_tcp_connection() -> Result<(UnboundedSender<Vec<u8>>, TcpStream)
 #[tokio::test]
 async fn test_parse_single_string() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let bytes = b"+OK\r\n";
 
@@ -48,7 +49,8 @@ async fn test_parse_single_string() {
 #[tokio::test]
 async fn test_parse_bulk_string() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let bytes = b"$5\r\nhello\r\n";
 
@@ -63,7 +65,8 @@ async fn test_parse_bulk_string() {
 #[tokio::test]
 async fn test_parse_array() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let bytes = b"*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$7\r\nmyvalue\r\n";
 
@@ -82,7 +85,8 @@ async fn test_parse_array() {
 #[tokio::test]
 async fn test_parse_simple_error() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let bytes = b"-Error message\r\n";
 
@@ -97,7 +101,8 @@ async fn test_parse_simple_error() {
 #[tokio::test]
 async fn test_parse_integer() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let bytes = b":1000\r\n";
 
@@ -112,7 +117,8 @@ async fn test_parse_integer() {
 #[tokio::test]
 async fn test_parse_null_bulk_string() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let bytes = b"$-1\r\n";
 
@@ -127,7 +133,8 @@ async fn test_parse_null_bulk_string() {
 #[tokio::test]
 async fn test_parse_multiple_commands_sequentially() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     let simple_string = b"+OK\r\n";
     let bulk_string = b"$5\r\nhello\r\n";
@@ -185,7 +192,8 @@ async fn test_parse_multiple_commands_sequentially() {
 #[tokio::test]
 async fn test_parse_incomplete_frame() {
     let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
-    let mut connection = Connection::new(tcp_stream);
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
 
     // Command split into three parts to simulate partial/incomplete data sending.
     // "*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$7\r\nmyvalue\r\n";

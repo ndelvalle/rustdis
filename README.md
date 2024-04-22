@@ -7,3 +7,12 @@ The primary goal of rustdis is to offer a straightforward and comprehensible imp
 As of now, rustdis focuses exclusively on implementing Redis' String data type and its associated methods. You can find more about Redis strings here: [Redis Strings](https://redis.io/docs/data-types/strings/).
 
 This server is not production-ready; it's purely educational and intended for learning purposes.
+
+### Run
+```shell
+cargo run
+```
+### Test
+```shell
+cargo test
+```

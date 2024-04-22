@@ -1,3 +1,4 @@
+pub mod append;
 pub mod client;
 pub mod command;
 pub mod config;
@@ -15,6 +16,8 @@ pub mod ping;
 pub mod scan;
 pub mod select;
 pub mod set;
+pub mod setnx;
+pub mod strlen;
 pub mod ttl;
 pub mod type_;
 
@@ -28,6 +31,7 @@ use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
 
+use append::Append;
 use client::Client;
 use command::Command as Command_;
 use config::Config;
@@ -44,11 +48,14 @@ use ping::Ping;
 use scan::Scan;
 use select::Select;
 use set::Set;
+use setnx::Setnx;
+use strlen::Strlen;
 use ttl::Ttl;
 use type_::Type;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
+    Append(Append),
     DBsize(DBSize),
     Del(Del),
     Exists(Exists),
@@ -58,6 +65,8 @@ pub enum Command {
     Object(Object),
     Scan(Scan),
     Set(Set),
+    Setnx(Setnx),
+    Strlen(Strlen),
     Ttl(Ttl),
     Type(Type),
 
@@ -73,6 +82,7 @@ pub enum Command {
 impl Executable for Command {
     fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
         match self {
+            Command::Append(cmd) => cmd.exec(store),
             Command::Client(cmd) => cmd.exec(store),
             Command::Command(cmd) => cmd.exec(store),
             Command::Config(cmd) => cmd.exec(store),
@@ -89,6 +99,8 @@ impl Executable for Command {
             Command::Scan(cmd) => cmd.exec(store),
             Command::Select(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
+            Command::Setnx(cmd) => cmd.exec(store),
+            Command::Strlen(cmd) => cmd.exec(store),
             Command::Ttl(cmd) => cmd.exec(store),
             Command::Type(cmd) => cmd.exec(store),
         }
@@ -118,6 +130,7 @@ impl TryFrom<Frame> for Command {
         let command_name = parser.parse_command_name()?;
 
         match &command_name[..] {
+            "append" => Append::try_from(parser).map(Command::Append),
             "client" => Client::try_from(parser).map(Command::Client),
             "command" => Command_::try_from(parser).map(Command::Command),
             "config" => Config::try_from(parser).map(Command::Config),
@@ -134,6 +147,8 @@ impl TryFrom<Frame> for Command {
             "scan" => Scan::try_from(parser).map(Command::Scan),
             "select" => Select::try_from(parser).map(Command::Select),
             "set" => Set::try_from(parser).map(Command::Set),
+            "setnx" => Setnx::try_from(parser).map(Command::Setnx),
+            "strlen" => Strlen::try_from(parser).map(Command::Strlen),
             "ttl" => Ttl::try_from(parser).map(Command::Ttl),
             "type" => Type::try_from(parser).map(Command::Type),
             _ => Err(CommandParserError::UnknownCommand {
