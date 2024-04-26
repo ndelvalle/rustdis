@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::usize;
 
 use crate::commands::executable::Executable;
-use crate::commands::{CommandParser, CommandParserError};
+use crate::commands::CommandParser;
 use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
@@ -63,16 +63,8 @@ impl TryFrom<&mut CommandParser> for Getrange {
 
     fn try_from(parser: &mut CommandParser) -> Result<Self, Self::Error> {
         let key = parser.next_string()?;
-        let start = parser.next_string()?;
-        let end = parser.next_string()?;
-
-        let start: i64 = start
-            .parse()
-            .map_err(|_| CommandParserError::InvalidCommandArgument { argument: start })?;
-
-        let end: i64 = end
-            .parse()
-            .map_err(|_| CommandParserError::InvalidCommandArgument { argument: end })?;
+        let start = parser.next_integer()?;
+        let end = parser.next_integer()?;
 
         Ok(Self { key, start, end })
     }
