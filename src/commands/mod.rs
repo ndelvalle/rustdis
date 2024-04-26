@@ -212,7 +212,7 @@ impl CommandParser {
         }
     }
 
-    fn _next_integer(&mut self) -> Result<i64, CommandParserError> {
+    fn next_integer(&mut self) -> Result<i64, CommandParserError> {
         let frame = self
             .parts
             .next()
@@ -220,6 +220,21 @@ impl CommandParser {
 
         match frame {
             Frame::Integer(i) => Ok(i),
+            Frame::Simple(string) => {
+                string
+                    .parse::<i64>()
+                    .map_err(|_| CommandParserError::InvalidFrame {
+                        expected: "parseable i64 frame".to_string(),
+                        actual: Frame::Simple(string),
+                    })
+            }
+            Frame::Bulk(bytes) => str::from_utf8(&bytes[..])
+                .map_err(CommandParserError::InvalidUTF8String)?
+                .parse::<i64>()
+                .map_err(|_| CommandParserError::InvalidFrame {
+                    expected: "parseable i64 frame".to_string(),
+                    actual: Frame::Bulk(bytes),
+                }),
             frame => Err(CommandParserError::InvalidFrame {
                 expected: "integer".to_string(),
                 actual: frame,
@@ -252,8 +267,6 @@ pub(crate) enum CommandParserError {
     InvalidFrame { expected: String, actual: Frame },
     #[error("protocol error; unknown command {command}")]
     UnknownCommand { command: String },
-    #[error("protocol error; invalid command argument {argument}")]
-    InvalidCommandArgument { argument: String },
     #[error("protocol error; invalid UTF-8 string")]
     InvalidUTF8String(#[from] str::Utf8Error),
     #[error("protocol error; attempting to extract a value failed due to the frame being fully consumed")]
