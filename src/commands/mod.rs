@@ -7,6 +7,8 @@ pub mod del;
 pub mod executable;
 pub mod exists;
 pub mod get;
+pub mod getdel;
+pub mod getrange;
 pub mod info;
 pub mod keys;
 pub mod memory;
@@ -39,6 +41,8 @@ use dbsize::DBSize;
 use del::Del;
 use exists::Exists;
 use get::Get;
+use getdel::Getdel;
+use getrange::Getrange;
 use info::Info;
 use keys::Keys;
 use memory::Memory;
@@ -60,6 +64,8 @@ pub enum Command {
     Del(Del),
     Exists(Exists),
     Get(Get),
+    Getdel(Getdel),
+    Getrange(Getrange),
     Keys(Keys),
     Memory(Memory),
     Object(Object),
@@ -90,6 +96,8 @@ impl Executable for Command {
             Command::Del(cmd) => cmd.exec(store),
             Command::Exists(cmd) => cmd.exec(store),
             Command::Get(cmd) => cmd.exec(store),
+            Command::Getdel(cmd) => cmd.exec(store),
+            Command::Getrange(cmd) => cmd.exec(store),
             Command::Info(cmd) => cmd.exec(store),
             Command::Keys(cmd) => cmd.exec(store),
             Command::Memory(cmd) => cmd.exec(store),
@@ -138,6 +146,8 @@ impl TryFrom<Frame> for Command {
             "del" => Del::try_from(parser).map(Command::Del),
             "exists" => Exists::try_from(parser).map(Command::Exists),
             "get" => Get::try_from(parser).map(Command::Get),
+            "getdel" => Getdel::try_from(parser).map(Command::Getdel),
+            "getrange" => Getrange::try_from(parser).map(Command::Getrange),
             "info" => Info::try_from(parser).map(Command::Info),
             "keys" => Keys::try_from(parser).map(Command::Keys),
             "memory" => Memory::try_from(parser).map(Command::Memory),
@@ -242,6 +252,8 @@ pub(crate) enum CommandParserError {
     InvalidFrame { expected: String, actual: Frame },
     #[error("protocol error; unknown command {command}")]
     UnknownCommand { command: String },
+    #[error("protocol error; invalid command argument {argument}")]
+    InvalidCommandArgument { argument: String },
     #[error("protocol error; invalid UTF-8 string")]
     InvalidUTF8String(#[from] str::Utf8Error),
     #[error("protocol error; attempting to extract a value failed due to the frame being fully consumed")]
