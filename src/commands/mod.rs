@@ -46,6 +46,7 @@ use getdel::Getdel;
 use getrange::Getrange;
 use info::Info;
 use keys::Keys;
+use lcs::Lcs;
 use memory::Memory;
 use module::Module;
 use object::Object;
@@ -57,7 +58,6 @@ use setnx::Setnx;
 use strlen::Strlen;
 use ttl::Ttl;
 use type_::Type;
-use lcs::Lcs;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {

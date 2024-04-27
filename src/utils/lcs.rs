@@ -67,9 +67,6 @@ mod tests {
         assert_eq!(&lcs("aggtab", "gxtxayb"), "gtab");
 
         // unicode
-        assert_eq!(
-            &lcs("你好，世界", "再见世界"),
-            "世界"
-        );
+        assert_eq!(&lcs("你好，世界", "再见世界"), "世界");
     }
 }
