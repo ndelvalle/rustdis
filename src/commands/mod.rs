@@ -11,6 +11,7 @@ pub mod getdel;
 pub mod getrange;
 pub mod info;
 pub mod keys;
+pub mod lcs;
 pub mod memory;
 pub mod module;
 pub mod object;
@@ -45,6 +46,7 @@ use getdel::Getdel;
 use getrange::Getrange;
 use info::Info;
 use keys::Keys;
+use lcs::Lcs;
 use memory::Memory;
 use module::Module;
 use object::Object;
@@ -67,6 +69,7 @@ pub enum Command {
     Getdel(Getdel),
     Getrange(Getrange),
     Keys(Keys),
+    Lcs(Lcs),
     Memory(Memory),
     Object(Object),
     Scan(Scan),
@@ -100,6 +103,7 @@ impl Executable for Command {
             Command::Getrange(cmd) => cmd.exec(store),
             Command::Info(cmd) => cmd.exec(store),
             Command::Keys(cmd) => cmd.exec(store),
+            Command::Lcs(cmd) => cmd.exec(store),
             Command::Memory(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
             Command::Object(cmd) => cmd.exec(store),
@@ -150,6 +154,7 @@ impl TryFrom<Frame> for Command {
             "getrange" => Getrange::try_from(parser).map(Command::Getrange),
             "info" => Info::try_from(parser).map(Command::Info),
             "keys" => Keys::try_from(parser).map(Command::Keys),
+            "lcs" => Lcs::try_from(parser).map(Command::Lcs),
             "memory" => Memory::try_from(parser).map(Command::Memory),
             "module" => Module::try_from(parser).map(Command::Module),
             "object" => Object::try_from(parser).map(Command::Object),
