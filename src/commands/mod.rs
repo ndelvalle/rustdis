@@ -3,12 +3,16 @@ pub mod client;
 pub mod command;
 pub mod config;
 pub mod dbsize;
+pub mod decr;
+pub mod decrby;
 pub mod del;
 pub mod executable;
 pub mod exists;
 pub mod get;
 pub mod getdel;
 pub mod getrange;
+pub mod incr;
+pub mod incrby;
 pub mod info;
 pub mod keys;
 pub mod lcs;
@@ -39,11 +43,15 @@ use client::Client;
 use command::Command as Command_;
 use config::Config;
 use dbsize::DBSize;
+use decr::Decr;
+use decrby::DecrBy;
 use del::Del;
 use exists::Exists;
 use get::Get;
 use getdel::Getdel;
 use getrange::Getrange;
+use incr::Incr;
+use incrby::IncrBy;
 use info::Info;
 use keys::Keys;
 use lcs::Lcs;
@@ -68,7 +76,11 @@ pub enum Command {
     Get(Get),
     Getdel(Getdel),
     Getrange(Getrange),
+    Incr(Incr),
+    IncrBy(IncrBy),
     Keys(Keys),
+    Decr(Decr),
+    DecrBy(DecrBy),
     Lcs(Lcs),
     Memory(Memory),
     Object(Object),
@@ -96,11 +108,15 @@ impl Executable for Command {
             Command::Command(cmd) => cmd.exec(store),
             Command::Config(cmd) => cmd.exec(store),
             Command::DBsize(cmd) => cmd.exec(store),
+            Command::Decr(cmd) => cmd.exec(store),
+            Command::DecrBy(cmd) => cmd.exec(store),
             Command::Del(cmd) => cmd.exec(store),
             Command::Exists(cmd) => cmd.exec(store),
             Command::Get(cmd) => cmd.exec(store),
             Command::Getdel(cmd) => cmd.exec(store),
             Command::Getrange(cmd) => cmd.exec(store),
+            Command::Incr(cmd) => cmd.exec(store),
+            Command::IncrBy(cmd) => cmd.exec(store),
             Command::Info(cmd) => cmd.exec(store),
             Command::Keys(cmd) => cmd.exec(store),
             Command::Lcs(cmd) => cmd.exec(store),
@@ -147,11 +163,15 @@ impl TryFrom<Frame> for Command {
             "command" => Command_::try_from(parser).map(Command::Command),
             "config" => Config::try_from(parser).map(Command::Config),
             "dbsize" => DBSize::try_from(parser).map(Command::DBsize),
+            "decr" => Decr::try_from(parser).map(Command::Decr),
+            "decrby" => DecrBy::try_from(parser).map(Command::DecrBy),
             "del" => Del::try_from(parser).map(Command::Del),
             "exists" => Exists::try_from(parser).map(Command::Exists),
             "get" => Get::try_from(parser).map(Command::Get),
             "getdel" => Getdel::try_from(parser).map(Command::Getdel),
             "getrange" => Getrange::try_from(parser).map(Command::Getrange),
+            "incr" => Incr::try_from(parser).map(Command::Incr),
+            "incrby" => IncrBy::try_from(parser).map(Command::IncrBy),
             "info" => Info::try_from(parser).map(Command::Info),
             "keys" => Keys::try_from(parser).map(Command::Keys),
             "lcs" => Lcs::try_from(parser).map(Command::Lcs),

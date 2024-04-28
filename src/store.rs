@@ -39,6 +39,27 @@ impl Store {
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Bytes)> {
         self.store.iter()
     }
+
+    pub fn incr_by(&mut self, key: &str, increment: i64) -> Result<i64, String> {
+        let err = "value is not an integer or out of range".to_string();
+
+        let value = match self.get(key) {
+            Some(value) => match std::str::from_utf8(value.as_ref())
+                .map_err(|_| err.clone())
+                .and_then(|s| s.parse::<i64>().map_err(|_| err))
+            {
+                Ok(value) => value,
+                Err(_) => return Err("value is not an integer or out of range".to_string()),
+            },
+            None => 0,
+        };
+
+        let new_value = value + increment;
+
+        self.set(key.to_string(), new_value.to_string().into());
+
+        Ok(new_value)
+    }
 }
 
 impl Default for Store {
