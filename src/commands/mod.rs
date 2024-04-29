@@ -24,6 +24,7 @@ pub mod scan;
 pub mod select;
 pub mod set;
 pub mod setnx;
+pub mod setrange;
 pub mod strlen;
 pub mod ttl;
 pub mod type_;
@@ -63,6 +64,7 @@ use scan::Scan;
 use select::Select;
 use set::Set;
 use setnx::Setnx;
+use setrange::Setrange;
 use strlen::Strlen;
 use ttl::Ttl;
 use type_::Type;
@@ -87,6 +89,7 @@ pub enum Command {
     Scan(Scan),
     Set(Set),
     Setnx(Setnx),
+    Setrange(Setrange),
     Strlen(Strlen),
     Ttl(Ttl),
     Type(Type),
@@ -128,6 +131,7 @@ impl Executable for Command {
             Command::Select(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
             Command::Setnx(cmd) => cmd.exec(store),
+            Command::Setrange(cmd) => cmd.exec(store),
             Command::Strlen(cmd) => cmd.exec(store),
             Command::Ttl(cmd) => cmd.exec(store),
             Command::Type(cmd) => cmd.exec(store),
@@ -183,6 +187,7 @@ impl TryFrom<Frame> for Command {
             "select" => Select::try_from(parser).map(Command::Select),
             "set" => Set::try_from(parser).map(Command::Set),
             "setnx" => Setnx::try_from(parser).map(Command::Setnx),
+            "setrange" => Setrange::try_from(parser).map(Command::Setrange),
             "strlen" => Strlen::try_from(parser).map(Command::Strlen),
             "ttl" => Ttl::try_from(parser).map(Command::Ttl),
             "type" => Type::try_from(parser).map(Command::Type),
@@ -292,6 +297,8 @@ pub(crate) enum CommandParserError {
     InvalidFrame { expected: String, actual: Frame },
     #[error("protocol error; unknown command {command}")]
     UnknownCommand { command: String },
+    #[error("protocol error; invalid command argument {argument}")]
+    InvalidCommandArgument { argument: String },
     #[error("protocol error; invalid UTF-8 string")]
     InvalidUTF8String(#[from] str::Utf8Error),
     #[error("protocol error; attempting to extract a value failed due to the frame being fully consumed")]
