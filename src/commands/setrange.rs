@@ -54,6 +54,7 @@ impl TryFrom<&mut CommandParser> for Setrange {
 
         if offset as usize >= MAX_OFFSET {
             return Err(CommandParserError::InvalidCommandArgument {
+                command: String::from("SETRANGE"),
                 argument: String::from("offset"),
             }
             .into());
@@ -179,6 +180,7 @@ mod tests {
         assert_eq!(
             *err,
             CommandParserError::InvalidCommandArgument {
+                command: String::from("SETRANGE"),
                 argument: "offset".to_string(),
             }
         );

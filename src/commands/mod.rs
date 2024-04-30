@@ -297,8 +297,8 @@ pub(crate) enum CommandParserError {
     InvalidFrame { expected: String, actual: Frame },
     #[error("protocol error; unknown command {command}")]
     UnknownCommand { command: String },
-    #[error("protocol error; invalid command argument {argument}")]
-    InvalidCommandArgument { argument: String },
+    #[error("protocol error; invalid command argument {command} {argument}")]
+    InvalidCommandArgument { command: String, argument: String },
     #[error("protocol error; invalid UTF-8 string")]
     InvalidUTF8String(#[from] str::Utf8Error),
     #[error("protocol error; attempting to extract a value failed due to the frame being fully consumed")]
