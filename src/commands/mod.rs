@@ -13,6 +13,7 @@ pub mod getdel;
 pub mod getrange;
 pub mod incr;
 pub mod incrby;
+pub mod incrbyfloat;
 pub mod info;
 pub mod keys;
 pub mod lcs;
@@ -56,6 +57,7 @@ use getdel::Getdel;
 use getrange::Getrange;
 use incr::Incr;
 use incrby::IncrBy;
+use incrbyfloat::IncrByFloat;
 use info::Info;
 use keys::Keys;
 use lcs::Lcs;
@@ -88,6 +90,7 @@ pub enum Command {
     Getrange(Getrange),
     Incr(Incr),
     IncrBy(IncrBy),
+    IncrByFloat(IncrByFloat),
     Keys(Keys),
     Lcs(Lcs),
     Memory(Memory),
@@ -129,6 +132,7 @@ impl Executable for Command {
             Command::Getrange(cmd) => cmd.exec(store),
             Command::Incr(cmd) => cmd.exec(store),
             Command::IncrBy(cmd) => cmd.exec(store),
+            Command::IncrByFloat(cmd) => cmd.exec(store),
             Command::Info(cmd) => cmd.exec(store),
             Command::Keys(cmd) => cmd.exec(store),
             Command::Lcs(cmd) => cmd.exec(store),
@@ -188,6 +192,7 @@ impl TryFrom<Frame> for Command {
             "getrange" => Getrange::try_from(parser).map(Command::Getrange),
             "incr" => Incr::try_from(parser).map(Command::Incr),
             "incrby" => IncrBy::try_from(parser).map(Command::IncrBy),
+            "incrbyfloat" => IncrByFloat::try_from(parser).map(Command::IncrByFloat),
             "info" => Info::try_from(parser).map(Command::Info),
             "keys" => Keys::try_from(parser).map(Command::Keys),
             "lcs" => Lcs::try_from(parser).map(Command::Lcs),
@@ -282,6 +287,36 @@ impl CommandParser {
                 }),
             frame => Err(CommandParserError::InvalidFrame {
                 expected: "integer".to_string(),
+                actual: frame,
+            }),
+        }
+    }
+
+    fn next_float(&mut self) -> Result<f64, CommandParserError> {
+        let frame = self
+            .parts
+            .next()
+            .ok_or_else(|| CommandParserError::EndOfStream)?;
+
+        match frame {
+            Frame::Integer(i) => Ok(i as f64),
+            Frame::Simple(string) => {
+                string
+                    .parse::<f64>()
+                    .map_err(|_| CommandParserError::InvalidFrame {
+                        expected: "parseable f64 frame".to_string(),
+                        actual: Frame::Simple(string),
+                    })
+            }
+            Frame::Bulk(bytes) => str::from_utf8(&bytes[..])
+                .map_err(CommandParserError::InvalidUTF8String)?
+                .parse::<f64>()
+                .map_err(|_| CommandParserError::InvalidFrame {
+                    expected: "parseable f64 frame".to_string(),
+                    actual: Frame::Bulk(bytes),
+                }),
+            frame => Err(CommandParserError::InvalidFrame {
+                expected: "float".to_string(),
                 actual: frame,
             }),
         }

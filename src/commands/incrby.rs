@@ -126,7 +126,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Frame::Error("value is not an integer or out of range".to_string())
+            Frame::Error("value is not of the correct type or out of range".to_string())
         );
 
         assert_eq!(
@@ -162,7 +162,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Frame::Error("value is not an integer or out of range".to_string())
+            Frame::Error("value is not of the correct type or out of range".to_string())
         );
 
         assert_eq!(
