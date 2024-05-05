@@ -1,8 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
-use crate::commands::CommandParser;
-use crate::commands::CommandParserError;
+use crate::commands::{Command as RootCommand, CommandParser, CommandParserError};
 use crate::frame::Frame;
 use crate::store::Store;
 use crate::Error;
@@ -55,45 +54,11 @@ pub struct Root;
 
 impl Executable for Root {
     fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        // TODO: can we use reflection to get all the commands?
-        let cmds = vec![
-            "append",
-            "client",
-            "command",
-            "config",
-            "dbsize",
-            "decr",
-            "decrby",
-            "del",
-            "exists",
-            "get",
-            "getdel",
-            "getrange",
-            "incr",
-            "incrby",
-            "incrbyfloat",
-            "info",
-            "keys",
-            "lcs",
-            "memory",
-            "mget",
-            "module",
-            "mset",
-            "msetnx",
-            "object encoding",
-            "ping",
-            "scan",
-            "select",
-            "set",
-            "setnx",
-            "setrange",
-            "strlen",
-            "ttl",
-            "type",
-        ]
-        .iter()
-        .map(|s| Frame::Simple(s.to_uppercase().to_string()))
-        .collect();
+        // TODO: list subcommands
+        let cmds = RootCommand::all_variants()
+            .iter()
+            .map(|s| Frame::Simple(s.to_uppercase().to_string()))
+            .collect();
 
         Ok(Frame::Array(cmds))
     }

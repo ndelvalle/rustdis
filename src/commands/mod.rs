@@ -38,6 +38,8 @@ use std::sync::{Arc, Mutex};
 use std::{str, vec};
 use thiserror::Error as ThisError;
 
+use enum_variants::VariantNames;
+
 use crate::commands::executable::Executable;
 use crate::frame::Frame;
 use crate::store::Store;
@@ -77,7 +79,7 @@ use strlen::Strlen;
 use ttl::Ttl;
 use type_::Type;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, VariantNames)]
 pub enum Command {
     Append(Append),
     DBsize(DBSize),
