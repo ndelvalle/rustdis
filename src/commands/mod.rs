@@ -19,6 +19,7 @@ pub mod lcs;
 pub mod memory;
 pub mod mget;
 pub mod module;
+pub mod mset;
 pub mod object;
 pub mod ping;
 pub mod scan;
@@ -60,6 +61,7 @@ use lcs::Lcs;
 use memory::Memory;
 use mget::Mget;
 use module::Module;
+use mset::Mset;
 use object::Object;
 use ping::Ping;
 use scan::Scan;
@@ -88,6 +90,7 @@ pub enum Command {
     Lcs(Lcs),
     Memory(Memory),
     Mget(Mget),
+    Mset(Mset),
     Object(Object),
     Scan(Scan),
     Set(Set),
@@ -129,6 +132,7 @@ impl Executable for Command {
             Command::Memory(cmd) => cmd.exec(store),
             Command::Mget(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
+            Command::Mset(cmd) => cmd.exec(store),
             Command::Object(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
             Command::Scan(cmd) => cmd.exec(store),
@@ -186,6 +190,7 @@ impl TryFrom<Frame> for Command {
             "memory" => Memory::try_from(parser).map(Command::Memory),
             "mget" => Mget::try_from(parser).map(Command::Mget),
             "module" => Module::try_from(parser).map(Command::Module),
+            "mset" => Mset::try_from(parser).map(Command::Mset),
             "object" => Object::try_from(parser).map(Command::Object),
             "ping" => Ping::try_from(parser).map(Command::Ping),
             "scan" => Scan::try_from(parser).map(Command::Scan),
