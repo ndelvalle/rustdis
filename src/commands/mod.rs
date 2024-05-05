@@ -17,6 +17,7 @@ pub mod info;
 pub mod keys;
 pub mod lcs;
 pub mod memory;
+pub mod mget;
 pub mod module;
 pub mod object;
 pub mod ping;
@@ -57,6 +58,7 @@ use info::Info;
 use keys::Keys;
 use lcs::Lcs;
 use memory::Memory;
+use mget::Mget;
 use module::Module;
 use object::Object;
 use ping::Ping;
@@ -73,6 +75,8 @@ use type_::Type;
 pub enum Command {
     Append(Append),
     DBsize(DBSize),
+    Decr(Decr),
+    DecrBy(DecrBy),
     Del(Del),
     Exists(Exists),
     Get(Get),
@@ -81,10 +85,9 @@ pub enum Command {
     Incr(Incr),
     IncrBy(IncrBy),
     Keys(Keys),
-    Decr(Decr),
-    DecrBy(DecrBy),
     Lcs(Lcs),
     Memory(Memory),
+    Mget(Mget),
     Object(Object),
     Scan(Scan),
     Set(Set),
@@ -124,6 +127,7 @@ impl Executable for Command {
             Command::Keys(cmd) => cmd.exec(store),
             Command::Lcs(cmd) => cmd.exec(store),
             Command::Memory(cmd) => cmd.exec(store),
+            Command::Mget(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
             Command::Object(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
@@ -180,6 +184,7 @@ impl TryFrom<Frame> for Command {
             "keys" => Keys::try_from(parser).map(Command::Keys),
             "lcs" => Lcs::try_from(parser).map(Command::Lcs),
             "memory" => Memory::try_from(parser).map(Command::Memory),
+            "mget" => Mget::try_from(parser).map(Command::Mget),
             "module" => Module::try_from(parser).map(Command::Module),
             "object" => Object::try_from(parser).map(Command::Object),
             "ping" => Ping::try_from(parser).map(Command::Ping),
