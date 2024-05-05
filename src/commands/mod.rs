@@ -20,6 +20,7 @@ pub mod memory;
 pub mod mget;
 pub mod module;
 pub mod mset;
+pub mod msetnx;
 pub mod object;
 pub mod ping;
 pub mod scan;
@@ -60,6 +61,7 @@ use keys::Keys;
 use lcs::Lcs;
 use memory::Memory;
 use mget::Mget;
+use msetnx::Msetnx;
 use module::Module;
 use mset::Mset;
 use object::Object;
@@ -91,6 +93,7 @@ pub enum Command {
     Memory(Memory),
     Mget(Mget),
     Mset(Mset),
+    Msetnx(Msetnx),
     Object(Object),
     Scan(Scan),
     Set(Set),
@@ -133,6 +136,7 @@ impl Executable for Command {
             Command::Mget(cmd) => cmd.exec(store),
             Command::Module(cmd) => cmd.exec(store),
             Command::Mset(cmd) => cmd.exec(store),
+            Command::Msetnx(cmd) => cmd.exec(store),
             Command::Object(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
             Command::Scan(cmd) => cmd.exec(store),
@@ -191,6 +195,7 @@ impl TryFrom<Frame> for Command {
             "mget" => Mget::try_from(parser).map(Command::Mget),
             "module" => Module::try_from(parser).map(Command::Module),
             "mset" => Mset::try_from(parser).map(Command::Mset),
+            "msetnx" => Msetnx::try_from(parser).map(Command::Msetnx),
             "object" => Object::try_from(parser).map(Command::Object),
             "ping" => Ping::try_from(parser).map(Command::Ping),
             "scan" => Scan::try_from(parser).map(Command::Scan),
