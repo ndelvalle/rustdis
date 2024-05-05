@@ -19,7 +19,7 @@ impl Executable for Mget {
         if self.keys.is_empty() {
             return Ok(Frame::Error(
                 "ERR wrong number of arguments for command".to_string(),
-            )); //
+            ));
         }
 
         let store = store.lock().unwrap();

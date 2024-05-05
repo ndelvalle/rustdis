@@ -11,6 +11,10 @@ use crate::Error;
 /// Sets the given keys to their respective values.
 /// Will not perform any operation at all even if just a single key already exists.
 ///
+/// Because of this semantic MSETNX can be used in order to set different keys representing
+/// different fields of a unique logic object in a way that ensures that either all the
+/// fields or none at all are set.
+///
 /// Ref: <https://redis.io/docs/latest/commands/msetnx/>
 #[derive(Debug, PartialEq)]
 pub struct Msetnx {
