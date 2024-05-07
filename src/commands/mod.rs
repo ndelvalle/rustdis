@@ -36,9 +36,8 @@ pub mod type_;
 use bytes::Bytes;
 use std::sync::{Arc, Mutex};
 use std::{str, vec};
+use strum_macros::VariantNames;
 use thiserror::Error as ThisError;
-
-use enum_variants::VariantNames;
 
 use crate::commands::executable::Executable;
 use crate::frame::Frame;
