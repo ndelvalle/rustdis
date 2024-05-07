@@ -1,5 +1,7 @@
 use std::sync::{Arc, Mutex};
 
+use strum::VariantNames;
+
 use crate::commands::executable::Executable;
 use crate::commands::{Command as RootCommand, CommandParser, CommandParserError};
 use crate::frame::Frame;
@@ -54,8 +56,7 @@ pub struct Root;
 
 impl Executable for Root {
     fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        // TODO: list subcommands
-        let cmds = RootCommand::all_variants()
+        let cmds = RootCommand::VARIANTS
             .iter()
             .map(|s| Frame::Simple(s.to_uppercase().to_string()))
             .collect();
