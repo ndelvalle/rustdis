@@ -1,9 +1,8 @@
 /// Longest common subsequence via Dynamic Programming
 ///
-/// Reference: https://github.com/TheAlgorithms/Rust/blob/master/src/dynamic_programming/longest_common_subsequence.rs
+/// Reference: <https://github.com/TheAlgorithms/Rust/blob/master/src/dynamic_programming/longest_common_subsequence.rs>
 
-/// longest_common_subsequence(a, b) returns the longest common subsequence
-/// between the strings a and b.
+/// `lcs(a, b)` returns the longest common subsequence between the strings `a` and `b`.
 pub fn lcs(a: &str, b: &str) -> String {
     let a: Vec<_> = a.chars().collect();
     let b: Vec<_> = b.chars().collect();

@@ -12,7 +12,7 @@ pub enum Object {
     Encoding(Encoding),
 }
 
-/// Encoding returns the internal encoding for the Redis object stored at <key>.
+/// Encoding returns the internal encoding for the Redis object stored at `<key>`.
 ///
 /// Ref: <https://redis.io/docs/latest/commands/object-encoding>
 #[derive(Debug, PartialEq)]
