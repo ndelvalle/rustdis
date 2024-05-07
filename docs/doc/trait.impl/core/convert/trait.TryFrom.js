@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"rustdis":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.77.2/core/convert/trait.TryFrom.html\" title=\"trait core::convert::TryFrom\">TryFrom</a>&lt;<a class=\"enum\" href=\"rustdis/frame/enum.Frame.html\" title=\"enum rustdis::frame::Frame\">Frame</a>&gt; for <a class=\"enum\" href=\"rustdis/commands/enum.Command.html\" title=\"enum rustdis::commands::Command\">Command</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
