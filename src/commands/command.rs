@@ -56,6 +56,7 @@ pub struct Root;
 
 impl Executable for Root {
     fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+        // TODO: list subcommands
         let cmds = RootCommand::VARIANTS
             .iter()
             .map(|s| Frame::Simple(s.to_uppercase().to_string()))

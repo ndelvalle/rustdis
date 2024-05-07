@@ -37,7 +37,6 @@ use bytes::Bytes;
 use std::sync::{Arc, Mutex};
 use std::{str, vec};
 use strum_macros::VariantNames;
-
 use thiserror::Error as ThisError;
 
 use crate::commands::executable::Executable;
