@@ -2,7 +2,13 @@
 name = "rustdis"
 version = "0.1.0"
 edition = "2021"
-
+license = "MIT"
+description = "A partial Redis server implementation intended purely for educational purposes"
+readme = "README.md"
+authors = [
+  "Christian Gill <gillchristiang@gmail.com>",
+  "Nicolas del Valle <nicolas.delvalle@gmail.com>",
+]
 
 [[bin]]
 name = "rustdis"
