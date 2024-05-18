@@ -15,8 +15,88 @@
 //! * `connection`: The Connection module manages a TCP connection for a Redis client. It separates
 //! the TCP stream into readable and writable components to facilitate data consumption and
 //! transmission. The server uses this connection module to read data from the TCP connection.
-//! Additionally, the connection module uses the codec module to convert raw TCP bytes into
-//! comprehensible data structures (Frames).
+//!
+//! * `codec`: This module is responsible for decoding raw TCP byte streams into `Frame` data
+//! structures. This is an essential component for translating incoming client requests into
+//! meaningful Redis commands.
+//!
+//! * `frame`: This module defines the `Frame` enum, representing different types of Redis protocol
+//! messages, and provides parsing and serialization functionalities. It adheres to the RESP (Redis
+//! Serialization Protocol) specifications.
+//!
+//! * `store`: This module provides a simple key-value store for managing Redis string data types.
+//! It supports basic operations such as setting, getting, removing, and incrementing values
+//! associated with keys.
+//!
+//!                         +--------------------------------------+
+//!                         |             Redis Client             |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Request (e.g., SET key value)
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                  Server              |
+//!                         |    (module: server, function: run)   |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Accept Connection
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                Connection            |
+//!                         |   (module: connection, manages TCP   |
+//!                         |        connections and streams)      |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Read Data from TCP Stream
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                   Codec              |
+//!                         |  (module: codec, function: decode)   |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Decode Request
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                   Frame              |
+//!                         |  (module: frame, function: parse)    |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Parse Command and Data
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                   Store              |
+//!                         |  (module: store, manages key-value   |
+//!                         |          data storage)               |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Execute Command (e.g., set, get, incr_by)
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                   Frame              |
+//!                         |  (module: frame, function: serialize)|
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Encode Response
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                   Codec              |
+//!                         |  (module: codec, function: encode)   |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Write Data to TCP Stream
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |                Connection            |
+//!                         |   (module: connection, manages TCP   |
+//!                         |        connections and streams)      |
+//!                         +-------------------+------------------+
+//!                                             |
+//!                                             | Send Response
+//!                                             v
+//!                         +-------------------+------------------+
+//!                         |             Redis Client             |
+//!                         +--------------------------------------+
+//!
 
 pub mod codec;
 pub mod commands;
