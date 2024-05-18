@@ -28,6 +28,8 @@
 //! It supports basic operations such as setting, getting, removing, and incrementing values
 //! associated with keys.
 //!
+//! ```text
+//!
 //!                         +--------------------------------------+
 //!                         |             Redis Client             |
 //!                         +-------------------+------------------+
@@ -97,6 +99,7 @@
 //!                         |             Redis Client             |
 //!                         +--------------------------------------+
 //!
+//! ```
 
 pub mod codec;
 pub mod commands;
