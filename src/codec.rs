@@ -25,15 +25,10 @@ impl Decoder for FrameCodec {
     // * Use src.reserve. This is a more efficient way to allocate space in the buffer.
     // * Read more here: https://docs.rs/tokio-util/latest/tokio_util/codec/index.html
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        // Check if the frame size exceeds a certain limit to prevent DoS attacks
-
-        println!("src.len(): {}", src.len());
-
+        // Check if the frame size exceeds the limit to prevent DoS attacks.
         if src.len() > FrameCodec::max_frame_size() {
             return Err("frame size exceeds limit".into());
         }
-
-        print!("processing frame: ");
 
         let mut cursor = Cursor::new(&src[..]);
         let frame = match Frame::parse(&mut cursor) {
