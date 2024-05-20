@@ -3,8 +3,8 @@
 //! The primary goal of rustdis is to offer a straightforward and comprehensible implementation,
 //! with no optimization techniques to ensure the code remains accessible and easy to understand.
 //! As of now, rustdis focuses exclusively on implementing Redis' String data type and its
-//! associated methods. You can find more about Redis strings here: [Redis
-//! Strings](https://redis.io/docs/data-types/strings/).
+//! associated methods. You can find more about Redis strings here:
+//! [Redis Strings](https://redis.io/docs/data-types/strings/).
 //!
 //! # Architecture
 //!
