@@ -1,5 +1,6 @@
 use bytes::{Buf, BytesMut};
 use std::convert::TryInto;
+use std::env;
 use std::io::Cursor;
 use tokio_util::codec::Decoder;
 
@@ -8,16 +9,27 @@ use crate::Error;
 
 pub struct FrameCodec;
 
+impl FrameCodec {
+    fn max_frame_size() -> usize {
+        env::var("MAX_FRAME_SIZE")
+            .map(|s| s.parse().expect("MAX_FRAME_SIZE must be a number"))
+            .unwrap_or(512 * 1024 * 1024)
+    }
+}
+
 impl Decoder for FrameCodec {
     type Item = Frame;
     type Error = Error;
 
     // TODO:
     // * Use src.reserve. This is a more efficient way to allocate space in the buffer.
-    // * Return an error if the frame is too large. This is a simple way to prevent a malicious
-    // client from sending a large frame and causing the server to run out of memory.
     // * Read more here: https://docs.rs/tokio-util/latest/tokio_util/codec/index.html
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        // Check if the frame size exceeds the limit to prevent DoS attacks.
+        if src.len() > FrameCodec::max_frame_size() {
+            return Err("frame size exceeds limit".into());
+        }
+
         let mut cursor = Cursor::new(&src[..]);
         let frame = match Frame::parse(&mut cursor) {
             Ok(frame) => frame,

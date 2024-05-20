@@ -218,3 +218,39 @@ async fn test_parse_incomplete_frame() {
     ]));
     assert_eq!(actual, expected);
 }
+
+#[tokio::test]
+async fn test_max_frame_size_limit() {
+    let one_mb = 1024 * 1024;
+    std::env::set_var("MAX_FRAME_SIZE", one_mb.to_string());
+
+    let (tcp_stream_tx, tcp_stream) = create_tcp_connection().await.unwrap();
+    let peer_addr = tcp_stream.peer_addr().unwrap();
+    let mut connection = Connection::new(tcp_stream, peer_addr);
+
+    // Frame below limit size calculation:
+    // The frame format includes a length indicator and data terminated with \r\n.
+    // For a frame just below the 1 MB limit (one_mb - 1 bytes):
+    // - Length Indicator: $1048575\r\n
+    //   - $: 1 byte
+    //   - 1048575: 7 bytes (for the length)
+    //   - \r\n: 2 bytes (CRLF)
+    //   Total length indicator size: 1 + 7 + 2 = 10 bytes
+    // - Data size: To fit within the limit, the data itself should be one_mb - 1 - 10 bytes.
+    //   Since the data terminates with \r\n, the actual data size should be one_mb - 12 bytes.
+    let frame_below_limit = format!("${}\r\n{}\r\n", one_mb - 1, "A".repeat(one_mb - 12));
+
+    let frame_above_limit = format!("${}\r\n{}\r\n", one_mb + 1, "A".repeat(one_mb + 1));
+
+    tcp_stream_tx.send(frame_below_limit.into_bytes()).unwrap();
+    tcp_stream_tx.send(frame_above_limit.into_bytes()).unwrap();
+
+    let _frame_below_limit = connection.read_frame().await.unwrap();
+    let frame_above_limit_result = connection.read_frame().await;
+    let frame_above_limit_error = frame_above_limit_result.unwrap_err();
+
+    assert_eq!(
+        frame_above_limit_error.to_string(),
+        "frame size exceeds limit"
+    );
+}
