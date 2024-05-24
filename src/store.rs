@@ -1,29 +1,75 @@
 use bytes::Bytes;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::ops::AddAssign;
 use std::str::FromStr;
+use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
+use tokio::sync::Notify;
+use tokio::time::{sleep_until, Instant};
+
+fn ttl_background_job_waker() -> &'static Notify {
+    static NOTIFY: OnceLock<Notify> = OnceLock::new();
+    NOTIFY.get_or_init(Notify::new)
+}
+
+type Key = String;
+
+struct Value {
+    data: Bytes,
+    ttl: Option<Instant>,
+}
+
+impl Value {
+    pub fn new(value: Bytes) -> Value {
+        Value {
+            data: value,
+            ttl: None,
+        }
+    }
+}
 
 pub struct Store {
-    store: HashMap<String, Bytes>,
+    store: HashMap<Key, Value>,
+    ttls: BTreeSet<(Instant, String)>,
 }
 
 impl Store {
     pub fn new() -> Store {
-        Store {
+        let store = Store {
             store: HashMap::new(),
+            ttls: BTreeSet::new(),
+        };
+
+        tokio::spawn(async move { expire_keys });
+
+        store
+    }
+
+    pub fn remove_expired_keys(&mut self) -> Option<Instant> {
+        let now = Instant::now();
+        while let Some((ttl, key)) = self.ttls.pop_first() {
+            if ttl > now {
+                return Some(ttl);
+            }
+            self.store.remove(&key);
         }
+        None
     }
 
     pub fn set(&mut self, key: String, value: Bytes) {
-        self.store.insert(key, value);
+        self.store.insert(key, Value::new(value));
     }
 
     pub fn get(&self, key: &str) -> Option<&Bytes> {
-        self.store.get(key)
+        self.store.get(key).map(|v| &v.data)
     }
 
     pub fn remove(&mut self, key: &str) -> Option<Bytes> {
-        self.store.remove(key)
+        let value = self.store.remove(key)?;
+        if let Some(ttl) = value.ttl {
+            self.ttls.remove(&(ttl, key.to_string()));
+        }
+        Some(value.data)
     }
 
     pub fn exists(&self, key: &str) -> bool {
@@ -39,7 +85,7 @@ impl Store {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Bytes)> {
-        self.store.iter()
+        self.store.iter().map(|(key, value)| (key, &value.data))
     }
 
     pub fn incr_by<T>(&mut self, key: &str, increment: T) -> Result<T, String>
@@ -70,5 +116,21 @@ impl Store {
 impl Default for Store {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+async fn expire_keys(store: Arc<Mutex<Store>>) {
+    let waker = ttl_background_job_waker();
+    loop {
+        let next_expiration = {
+            let mut store = store.lock().unwrap();
+            store.remove_expired_keys()
+        };
+
+        if let Some(next_expiration) = next_expiration {
+            sleep_until(next_expiration).await;
+        } else {
+            waker.notified().await;
+        }
     }
 }
