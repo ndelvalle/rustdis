@@ -70,8 +70,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn when_key_does_not_exists_with_no_offset() {
+    #[tokio::test]
+    async fn when_key_does_not_exists_with_no_offset() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -100,8 +100,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn when_key_does_not_exists_with_offset() {
+    #[tokio::test]
+    async fn when_key_does_not_exists_with_offset() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -130,8 +130,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn when_key_exists_with_offset() {
+    #[tokio::test]
+    async fn when_key_exists_with_offset() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -165,8 +165,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn when_offset_is_to_big() {
+    #[tokio::test]
+    async fn when_offset_is_to_big() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SETRANGE")),
             Frame::Bulk(Bytes::from("key1")),

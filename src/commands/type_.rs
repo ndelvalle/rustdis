@@ -46,8 +46,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn existing_key() {
+    #[tokio::test]
+    async fn existing_key() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("TYPE")),
             Frame::Bulk(Bytes::from("key1")),
@@ -72,8 +72,8 @@ mod tests {
         assert_eq!(result, Frame::Simple("string".to_string()));
     }
 
-    #[test]
-    fn missing_key() {
+    #[tokio::test]
+    async fn missing_key() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("TYPE")),
             Frame::Bulk(Bytes::from("key1")),

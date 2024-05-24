@@ -44,8 +44,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn insert_one() {
+    #[tokio::test]
+    async fn insert_one() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -69,8 +69,8 @@ mod tests {
         assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
     }
 
-    #[test]
-    fn overwrite_existing() {
+    #[tokio::test]
+    async fn overwrite_existing() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![

@@ -47,8 +47,8 @@ mod tests {
     use crate::commands::{Command, CommandParserError};
     use bytes::Bytes;
 
-    #[test]
-    fn with_wildcard_pattern() {
+    #[tokio::test]
+    async fn with_wildcard_pattern() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("KEYS")),
             Frame::Bulk(Bytes::from("*")),

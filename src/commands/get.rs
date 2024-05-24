@@ -41,8 +41,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn existing_key() {
+    #[tokio::test]
+    async fn existing_key() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -68,8 +68,8 @@ mod tests {
         assert_eq!(result, Frame::Bulk(Bytes::from("1")));
     }
 
-    #[test]
-    fn non_existing_key() {
+    #[tokio::test]
+    async fn non_existing_key() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![

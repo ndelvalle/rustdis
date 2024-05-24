@@ -45,8 +45,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn when_key_exists() {
+    #[tokio::test]
+    async fn when_key_exists() {
         let store = Arc::new(Mutex::new(Store::default()));
 
         let frame = Frame::Array(vec![
@@ -71,8 +71,8 @@ mod tests {
         assert_eq!(store.lock().unwrap().get("foo"), None);
     }
 
-    #[test]
-    fn when_key_does_not_exists() {
+    #[tokio::test]
+    async fn when_key_does_not_exists() {
         let store = Arc::new(Mutex::new(Store::default()));
 
         let frame = Frame::Array(vec![

@@ -43,8 +43,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn existing_key() {
+    #[tokio::test]
+    async fn existing_key() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("DECRBY")),
             Frame::Bulk(Bytes::from("key1")),
@@ -73,8 +73,8 @@ mod tests {
         assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("10")));
     }
 
-    #[test]
-    fn non_existing_key() {
+    #[tokio::test]
+    async fn non_existing_key() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("DECRBY")),
             Frame::Bulk(Bytes::from("key1")),
@@ -99,8 +99,8 @@ mod tests {
         assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("-10")));
     }
 
-    #[test]
-    fn invalid_key_type() {
+    #[tokio::test]
+    async fn invalid_key_type() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("DECRBY")),
             Frame::Bulk(Bytes::from("key1")),
@@ -135,8 +135,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn out_of_range() {
+    #[tokio::test]
+    async fn out_of_range() {
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("DECRBY")),
             Frame::Bulk(Bytes::from("key1")),

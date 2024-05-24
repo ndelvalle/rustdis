@@ -32,8 +32,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn zero_keys() {
+    #[tokio::test]
+    async fn zero_keys() {
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("DBSIZE"))]);
         let cmd = Command::try_from(frame).unwrap();
 
@@ -46,8 +46,8 @@ mod tests {
         assert_eq!(result, Frame::Integer(0));
     }
 
-    #[test]
-    fn multiple_keys() {
+    #[tokio::test]
+    async fn multiple_keys() {
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("DBSIZE"))]);
         let cmd = Command::try_from(frame).unwrap();
 

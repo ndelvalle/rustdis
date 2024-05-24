@@ -82,8 +82,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn insert_one() {
+    #[tokio::test]
+    async fn insert_one() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -110,8 +110,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn insert_many() {
+    #[tokio::test]
+    async fn insert_many() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -156,8 +156,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn on_existing_keys() {
+    #[tokio::test]
+    async fn on_existing_keys() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -189,8 +189,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn no_keys() {
+    #[tokio::test]
+    async fn no_keys() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("MSETNX"))]);

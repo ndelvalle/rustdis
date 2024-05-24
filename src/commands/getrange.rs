@@ -78,8 +78,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn when_key_exists_using_positive_index() {
+    #[tokio::test]
+    async fn when_key_exists_using_positive_index() {
         let store = Arc::new(Mutex::new(Store::default()));
 
         let frame = Frame::Array(vec![
@@ -107,8 +107,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("This")));
     }
 
-    #[test]
-    fn when_key_exists_using_negative_index() {
+    #[tokio::test]
+    async fn when_key_exists_using_negative_index() {
         let store = Arc::new(Mutex::new(Store::default()));
 
         let frame = Frame::Array(vec![
@@ -136,8 +136,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("ing")));
     }
 
-    #[test]
-    fn when_key_exists_using_positive_and_negative_index() {
+    #[tokio::test]
+    async fn when_key_exists_using_positive_and_negative_index() {
         let store = Arc::new(Mutex::new(Store::default()));
 
         let frame = Frame::Array(vec![
@@ -165,8 +165,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("This is a string")));
     }
 
-    #[test]
-    fn when_key_exists_using_out_of_bound_index() {
+    #[tokio::test]
+    async fn when_key_exists_using_out_of_bound_index() {
         let store = Arc::new(Mutex::new(Store::default()));
 
         let frame = Frame::Array(vec![

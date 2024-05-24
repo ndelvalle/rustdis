@@ -50,8 +50,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn when_key_does_not_exists() {
+    #[tokio::test]
+    async fn when_key_does_not_exists() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -75,8 +75,8 @@ mod tests {
         assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
     }
 
-    #[test]
-    fn when_key_already_exists() {
+    #[tokio::test]
+    async fn when_key_already_exists() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![

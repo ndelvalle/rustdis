@@ -67,8 +67,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn existing_key() {
+    #[tokio::test]
+    async fn existing_key() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -94,8 +94,8 @@ mod tests {
         assert_eq!(res, Frame::Array(vec![Frame::Bulk(Bytes::from("1"))]));
     }
 
-    #[test]
-    fn existing_keys() {
+    #[tokio::test]
+    async fn existing_keys() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -136,8 +136,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn non_existing_key() {
+    #[tokio::test]
+    async fn non_existing_key() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -158,8 +158,8 @@ mod tests {
         assert_eq!(res, Frame::Array(vec![Frame::Null]));
     }
 
-    #[test]
-    fn mixed_keys() {
+    #[tokio::test]
+    async fn mixed_keys() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -199,8 +199,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn no_keys() {
+    #[tokio::test]
+    async fn no_keys() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("MGET"))]);

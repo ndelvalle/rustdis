@@ -78,8 +78,8 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn no_match() {
+    #[tokio::test]
+    async fn no_match() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -109,8 +109,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("")));
     }
 
-    #[test]
-    fn full_match() {
+    #[tokio::test]
+    async fn full_match() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -140,8 +140,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("abc")));
     }
 
-    #[test]
-    fn partial_match() {
+    #[tokio::test]
+    async fn partial_match() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -171,8 +171,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("world")));
     }
 
-    #[test]
-    fn partial_match_inverted() {
+    #[tokio::test]
+    async fn partial_match_inverted() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -202,8 +202,8 @@ mod tests {
         assert_eq!(res, Frame::Bulk(Bytes::from("hello")));
     }
 
-    #[test]
-    fn len() {
+    #[tokio::test]
+    async fn len() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -234,8 +234,8 @@ mod tests {
         assert_eq!(res, Frame::Integer(5));
     }
 
-    #[test]
-    fn len_no_match() {
+    #[tokio::test]
+    async fn len_no_match() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -266,8 +266,8 @@ mod tests {
         assert_eq!(res, Frame::Integer(0));
     }
 
-    #[test]
-    fn len_full_match() {
+    #[tokio::test]
+    async fn len_full_match() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -298,8 +298,8 @@ mod tests {
         assert_eq!(res, Frame::Integer(3));
     }
 
-    #[test]
-    fn len_partial_match() {
+    #[tokio::test]
+    async fn len_partial_match() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
@@ -330,8 +330,8 @@ mod tests {
         assert_eq!(res, Frame::Integer(5));
     }
 
-    #[test]
-    fn missing_keys() {
+    #[tokio::test]
+    async fn missing_keys() {
         let store = Arc::new(Mutex::new(Store::new()));
 
         let frame = Frame::Array(vec![
