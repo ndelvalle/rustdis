@@ -1,100 +1,71 @@
 use bytes::Bytes;
 use std::collections::{BTreeSet, HashMap};
 use std::ops::AddAssign;
+use std::ops::Deref;
 use std::str::FromStr;
-use std::sync::OnceLock;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::sync::Notify;
-use tokio::time::{sleep_until, Instant};
+use tokio::time::{sleep_until, Duration, Instant};
 
-fn ttl_background_job_waker() -> &'static Notify {
-    static NOTIFY: OnceLock<Notify> = OnceLock::new();
-    NOTIFY.get_or_init(Notify::new)
-}
-
-type Key = String;
-
-struct Value {
-    data: Bytes,
-    ttl: Option<Instant>,
-}
-
-impl Value {
-    pub fn new(value: Bytes) -> Value {
-        Value {
-            data: value,
-            ttl: None,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct Store {
-    store: HashMap<Key, Value>,
-    ttls: BTreeSet<(Instant, String)>,
+    inner: Arc<InnerStore>,
 }
 
 impl Store {
     pub fn new() -> Store {
-        let store = Store {
-            store: HashMap::new(),
+        let state = State {
+            keys: HashMap::new(),
             ttls: BTreeSet::new(),
         };
 
-        tokio::spawn(async move { expire_keys });
+        let waker = Notify::new();
+        let inner = Arc::new(InnerStore {
+            state: Mutex::new(state),
+            waker,
+        });
 
-        store
+        tokio::spawn({
+            let inner = inner.clone();
+            async move { expire_keys(inner).await }
+        });
+
+        Self { inner }
+    }
+}
+
+impl Default for Store {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct InnerStore {
+    state: Mutex<State>,
+    waker: Notify,
+}
+
+impl Deref for Store {
+    type Target = InnerStore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl InnerStore {
+    pub fn lock(&self) -> MutexGuard<State> {
+        self.state.lock().unwrap()
     }
 
-    pub fn remove_expired_keys(&mut self) -> Option<Instant> {
-        let now = Instant::now();
-        while let Some((ttl, key)) = self.ttls.pop_first() {
-            if ttl > now {
-                return Some(ttl);
-            }
-            self.store.remove(&key);
-        }
-        None
-    }
-
-    pub fn set(&mut self, key: String, value: Bytes) {
-        self.store.insert(key, Value::new(value));
-    }
-
-    pub fn get(&self, key: &str) -> Option<&Bytes> {
-        self.store.get(key).map(|v| &v.data)
-    }
-
-    pub fn remove(&mut self, key: &str) -> Option<Bytes> {
-        let value = self.store.remove(key)?;
-        if let Some(ttl) = value.ttl {
-            self.ttls.remove(&(ttl, key.to_string()));
-        }
-        Some(value.data)
-    }
-
-    pub fn exists(&self, key: &str) -> bool {
-        self.store.contains_key(key)
-    }
-
-    pub fn keys(&self) -> impl Iterator<Item = &String> {
-        self.store.keys()
-    }
-
-    pub fn size(&self) -> usize {
-        self.store.len()
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Bytes)> {
-        self.store.iter().map(|(key, value)| (key, &value.data))
-    }
-
-    pub fn incr_by<T>(&mut self, key: &str, increment: T) -> Result<T, String>
+    pub fn incr_by<T>(&self, key: &str, increment: T) -> Result<T, String>
     where
         T: FromStr + ToString + AddAssign + Default,
     {
         let err = "value is not of the correct type or out of range".to_string();
+        let mut state = self.lock();
 
-        let mut value = match self.get(key) {
+        let mut value = match state.get(key) {
             Some(value) => match std::str::from_utf8(value.as_ref())
                 .map_err(|_| err.clone())
                 .and_then(|s| s.parse::<T>().map_err(|_| err.clone()))
@@ -107,30 +78,161 @@ impl Store {
 
         value += increment;
 
-        self.set(key.to_string(), value.to_string().into());
+        state.set(key.to_string(), value.to_string().into());
 
         Ok(value)
     }
-}
 
-impl Default for Store {
-    fn default() -> Self {
-        Self::new()
+    pub fn remove_expired_keys(&self) -> Option<Instant> {
+        let mut state = self.lock();
+        let now = Instant::now();
+
+        let expired_keys: Vec<(Instant, String)> = state
+            .ttls
+            .iter()
+            .take_while(|(expires_at, _)| expires_at <= &now)
+            .cloned()
+            .collect();
+
+        println!("Expired keys: {:?}", &expired_keys);
+
+        for (when, key) in expired_keys {
+            state.remove(&key);
+            state.ttls.remove(&(when, key));
+        }
+
+        state.ttls.iter().next().map(|&(expires_at, _)| expires_at)
     }
 }
 
-async fn expire_keys(store: Arc<Mutex<Store>>) {
-    let waker = ttl_background_job_waker();
-    loop {
-        let next_expiration = {
-            let mut store = store.lock().unwrap();
-            store.remove_expired_keys()
+type Key = String;
+
+pub struct Value {
+    pub data: Bytes,
+    pub expires_at: Option<Instant>,
+}
+
+pub struct NewValue {
+    pub data: Bytes,
+    pub ttl: Option<Duration>,
+}
+
+impl Value {
+    pub fn new(value: Bytes) -> Value {
+        Value {
+            data: value,
+            expires_at: None,
+        }
+    }
+}
+
+pub struct State {
+    keys: HashMap<Key, Value>,
+    ttls: BTreeSet<(Instant, String)>,
+}
+
+impl State {
+    pub fn set(&mut self, key: String, value: Bytes) {
+        self.keys.insert(key, Value::new(value));
+    }
+
+    pub fn set2(&mut self, key: String, value: NewValue) {
+        let ttl = value.ttl;
+        let expires_at = ttl.map(|ttl| Instant::now() + ttl);
+        let value = Value {
+            data: value.data,
+            expires_at,
         };
+        self.keys.insert(key.clone(), value);
+        if let Some(expires_at) = expires_at {
+            self.ttls.insert((expires_at, key));
+        }
+    }
+
+    pub fn get(&self, key: &str) -> Option<Bytes> {
+        self.keys.get(key).map(|v| v.data.clone())
+    }
+
+    pub fn remove(&mut self, key: &str) -> Option<Value> {
+        self.keys.remove(key)
+    }
+
+    pub fn exists(&self, key: &str) -> bool {
+        self.keys.contains_key(key)
+    }
+
+    pub fn size(&self) -> usize {
+        self.keys.len()
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.keys.keys()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Bytes)> {
+        self.keys.iter().map(|(key, value)| (key, &value.data))
+    }
+}
+
+async fn expire_keys(store: Arc<InnerStore>) {
+    loop {
+        tracing::error!("LOOPPINNGGG");
+        println!("LOOPPINNGGG");
+
+        let next_expiration = { store.remove_expired_keys() };
+
+        tracing::error!("next_expiration: {:?}", &next_expiration);
+        println!("next_expiration: {:?}", &next_expiration);
 
         if let Some(next_expiration) = next_expiration {
-            sleep_until(next_expiration).await;
+            tokio::select! {
+                _ = sleep_until(next_expiration) => {}
+                _ = store.waker.notified() => {}
+            }
         } else {
-            waker.notified().await;
+            store.waker.notified().await;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::time;
+    use tokio::time::Duration;
+
+    #[tokio::test]
+    async fn ttl() {
+        time::pause();
+
+        let store = Store::new();
+
+        store.lock().set2(
+            "key1".to_string(),
+            NewValue {
+                data: Bytes::from("value1"),
+                ttl: Some(Duration::from_secs(10)),
+            },
+        );
+
+        store.lock().set2(
+            "key2".to_string(),
+            NewValue {
+                data: Bytes::from("value2"),
+                ttl: Some(Duration::from_secs(20)),
+            },
+        );
+
+        assert_eq!(store.lock().keys().count(), 2);
+
+        time::advance(Duration::from_secs(10)).await;
+        time::sleep(Duration::from_millis(1)).await;
+
+        assert_eq!(store.lock().keys().count(), 1);
+        assert!(store.lock().exists("key2"));
+
+        time::advance(Duration::from_secs(20)).await;
+        time::sleep(Duration::from_millis(1)).await;
+        assert_eq!(store.lock().keys().count(), 0);
     }
 }

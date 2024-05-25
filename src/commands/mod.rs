@@ -34,7 +34,6 @@ pub mod ttl;
 pub mod type_;
 
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 use std::{str, vec};
 use strum_macros::VariantNames;
 use thiserror::Error as ThisError;
@@ -117,7 +116,7 @@ pub enum Command {
 }
 
 impl Executable for Command {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         match self {
             Command::Append(cmd) => cmd.exec(store),
             Command::Client(cmd) => cmd.exec(store),

@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
@@ -27,15 +26,16 @@ pub struct Setrange {
 }
 
 impl Executable for Setrange {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut store = store.lock().unwrap();
-        let current_value = store.get(&self.key).map(|b| b.as_ref()).unwrap_or_default();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
+        // let current_value = store.get(&self.key).map(|b| b.as_ref()).unwrap_or_default();
+        let current_value = store.get(&self.key).unwrap_or_default();
 
         let offset = self.offset as usize;
         let new_len = offset + self.value.len();
         let mut new_value = vec![b' '; usize::max(new_len, current_value.len())];
 
-        new_value[..current_value.len()].copy_from_slice(current_value);
+        new_value[..current_value.len()].copy_from_slice(&current_value);
         new_value[offset..new_len].copy_from_slice(&self.value);
 
         store.set(self.key.clone(), Bytes::from(new_value));
@@ -66,13 +66,14 @@ impl TryFrom<&mut CommandParser> for Setrange {
 
 #[cfg(test)]
 mod tests {
+    use bytes::Bytes;
+
     use super::*;
     use crate::commands::Command;
-    use bytes::Bytes;
 
     #[tokio::test]
     async fn when_key_does_not_exists_with_no_offset() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SETRANGE")),
@@ -94,15 +95,12 @@ mod tests {
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(11));
-        assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("Hello World"))
-        );
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("Hello World")));
     }
 
     #[tokio::test]
     async fn when_key_does_not_exists_with_offset() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SETRANGE")),
@@ -124,15 +122,12 @@ mod tests {
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(11));
-        assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("      Redis"))
-        );
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("      Redis")));
     }
 
     #[tokio::test]
     async fn when_key_exists_with_offset() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SETRANGE")),
@@ -153,15 +148,14 @@ mod tests {
 
         store
             .lock()
-            .unwrap()
             .set(String::from("key1"), Bytes::from("Hello World!!!"));
 
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(11));
         assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("Hello Redis!!!"))
+            store.lock().get("key1"),
+            Some(Bytes::from("Hello Redis!!!"))
         );
     }
 

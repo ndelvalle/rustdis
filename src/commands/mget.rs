@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
 use crate::frame::Frame;
@@ -15,14 +13,14 @@ pub struct Mget {
 }
 
 impl Executable for Mget {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         if self.keys.is_empty() {
             return Ok(Frame::Error(
                 "ERR wrong number of arguments for command".to_string(),
             ));
         }
 
-        let store = store.lock().unwrap();
+        let store = store.lock();
         let values = self
             .keys
             .iter()
@@ -63,13 +61,14 @@ impl TryFrom<&mut CommandParser> for Mget {
 
 #[cfg(test)]
 mod tests {
+    use bytes::Bytes;
+
     use super::*;
     use crate::commands::Command;
-    use bytes::Bytes;
 
     #[tokio::test]
     async fn existing_key() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MGET")),
@@ -84,10 +83,7 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("1"));
+        store.lock().set(String::from("key1"), Bytes::from("1"));
 
         let res = cmd.exec(store.clone()).unwrap();
 
@@ -96,7 +92,7 @@ mod tests {
 
     #[tokio::test]
     async fn existing_keys() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MGET")),
@@ -118,7 +114,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("key1"), Bytes::from("1"));
             store.set(String::from("key2"), Bytes::from("2"));
             store.set(String::from("key3"), Bytes::from("3"));
@@ -138,7 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn non_existing_key() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MGET")),
@@ -160,7 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn mixed_keys() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MGET")),
@@ -182,7 +178,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("key1"), Bytes::from("1"));
             store.set(String::from("key3"), Bytes::from("3"));
         }
@@ -201,7 +197,7 @@ mod tests {
 
     #[tokio::test]
     async fn no_keys() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("MGET"))]);
         let cmd = Command::try_from(frame).unwrap();

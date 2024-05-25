@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -17,9 +15,9 @@ pub struct Ttl {
 }
 
 impl Executable for Ttl {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
-        let ttl = if store.exists(&self.key) { -1 } else { -2 };
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let state = store.lock();
+        let ttl = if state.exists(&self.key) { -1 } else { -2 };
         Ok(Frame::Integer(ttl))
     }
 }

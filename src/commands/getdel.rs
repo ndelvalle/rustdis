@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -16,11 +14,11 @@ pub struct Getdel {
 }
 
 impl Executable for Getdel {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
         let removed_key = store.remove(&self.key);
         let res = match removed_key {
-            Some(val) => Frame::Bulk(val),
+            Some(val) => Frame::Bulk(val.data),
             None => Frame::Null,
         };
 
@@ -41,13 +39,12 @@ impl TryFrom<&mut CommandParser> for Getdel {
 mod tests {
     use bytes::Bytes;
 
-    use crate::commands::Command;
-
     use super::*;
+    use crate::commands::Command;
 
     #[tokio::test]
     async fn when_key_exists() {
-        let store = Arc::new(Mutex::new(Store::default()));
+        let store = Store::default();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GETDEL")),
@@ -61,19 +58,16 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set("foo".to_string(), Bytes::from("baz"));
+        store.lock().set("foo".to_string(), Bytes::from("baz"));
 
         let res = cmd.exec(store.clone()).unwrap();
         assert_eq!(res, Frame::Bulk(Bytes::from("baz")));
-        assert_eq!(store.lock().unwrap().get("foo"), None);
+        assert_eq!(store.lock().get("foo"), None);
     }
 
     #[tokio::test]
     async fn when_key_does_not_exists() {
-        let store = Arc::new(Mutex::new(Store::default()));
+        let store = Store::default();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GETDEL")),

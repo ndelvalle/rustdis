@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -18,8 +17,8 @@ pub struct Setnx {
 }
 
 impl Executable for Setnx {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
 
         let res = match store.get(&self.key) {
             Some(_) => Frame::Integer(0),
@@ -46,13 +45,14 @@ impl TryFrom<&mut CommandParser> for Setnx {
 
 #[cfg(test)]
 mod tests {
+    use bytes::Bytes;
+
     use super::*;
     use crate::commands::Command;
-    use bytes::Bytes;
 
     #[tokio::test]
     async fn when_key_does_not_exists() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SETNX")),
@@ -72,12 +72,12 @@ mod tests {
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(1));
-        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("1")));
     }
 
     #[tokio::test]
     async fn when_key_already_exists() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SETNX")),
@@ -94,14 +94,11 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("1"));
+        store.lock().set(String::from("key1"), Bytes::from("1"));
 
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(0));
-        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("1")));
     }
 }

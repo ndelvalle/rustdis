@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
 use crate::frame::Frame;
@@ -21,7 +19,7 @@ pub struct Usage {
 }
 
 impl Executable for Memory {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         match self {
             Self::Usage(encoding) => encoding.exec(store),
         }
@@ -49,8 +47,8 @@ impl TryFrom<&mut CommandParser> for Memory {
 }
 
 impl Executable for Usage {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
         let res = match store.get(&self.key) {
             Some(value) => Frame::Integer(value.len() as i64),
             None => Frame::Null,

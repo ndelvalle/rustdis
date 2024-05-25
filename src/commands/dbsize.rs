@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -13,8 +11,8 @@ use crate::Error;
 pub struct DBSize;
 
 impl Executable for DBSize {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        Ok(Frame::Integer(store.lock().unwrap().size() as i64))
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        Ok(Frame::Integer(store.lock().size() as i64))
     }
 }
 
@@ -34,12 +32,12 @@ mod tests {
 
     #[tokio::test]
     async fn zero_keys() {
+        let store = Store::new();
+
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("DBSIZE"))]);
         let cmd = Command::try_from(frame).unwrap();
 
         assert_eq!(cmd, Command::DBsize(DBSize));
-
-        let store = Arc::new(Mutex::new(Store::new()));
 
         let result = cmd.exec(store.clone()).unwrap();
 
@@ -48,14 +46,15 @@ mod tests {
 
     #[tokio::test]
     async fn multiple_keys() {
+        let store = Store::new();
+
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("DBSIZE"))]);
         let cmd = Command::try_from(frame).unwrap();
 
         assert_eq!(cmd, Command::DBsize(DBSize));
 
-        let store = Arc::new(Mutex::new(Store::new()));
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("key1"), Bytes::from("1"));
             store.set(String::from("key2"), Bytes::from("2"));
             store.set(String::from("key3"), Bytes::from("3"));

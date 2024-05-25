@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -15,8 +13,8 @@ pub struct Get {
 }
 
 impl Executable for Get {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
         let value = store.get(&self.key);
 
         match value {
@@ -37,13 +35,14 @@ impl TryFrom<&mut CommandParser> for Get {
 
 #[cfg(test)]
 mod tests {
+    use bytes::Bytes;
+
     use super::*;
     use crate::commands::Command;
-    use bytes::Bytes;
 
     #[tokio::test]
     async fn existing_key() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GET")),
@@ -58,10 +57,7 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("1"));
+        store.lock().set(String::from("key1"), Bytes::from("1"));
 
         let result = cmd.exec(store.clone()).unwrap();
 
@@ -70,7 +66,7 @@ mod tests {
 
     #[tokio::test]
     async fn non_existing_key() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GET")),

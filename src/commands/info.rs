@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -65,7 +64,7 @@ db0:keys=397255,expires=845,avg_ttl=1527956522210785
 pub struct Info;
 
 impl Executable for Info {
-    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, _store: Store) -> Result<Frame, Error> {
         Ok(Frame::Bulk(Bytes::from(INFO)))
     }
 }

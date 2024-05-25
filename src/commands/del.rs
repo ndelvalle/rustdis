@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
 use crate::frame::Frame;
@@ -17,9 +15,9 @@ pub struct Del {
 }
 
 impl Executable for Del {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         let mut count = 0;
-        let mut store = store.lock().unwrap();
+        let mut store = store.lock();
         for key in self.keys {
             if store.remove(&key).is_some() {
                 count += 1;
@@ -53,9 +51,8 @@ impl TryFrom<&mut CommandParser> for Del {
 mod tests {
     use bytes::Bytes;
 
-    use crate::commands::Command;
-
     use super::*;
+    use crate::commands::Command;
 
     #[test]
     fn multiple_keys() {

@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -19,7 +18,7 @@ pub struct Select {
 }
 
 impl Executable for Select {
-    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, _store: Store) -> Result<Frame, Error> {
         Ok(Frame::Simple("OK".to_string()))
     }
 }

@@ -1,6 +1,5 @@
 use bytes::Bytes;
 use std::str::from_utf8;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -25,24 +24,14 @@ pub struct Lcs {
 }
 
 impl Executable for Lcs {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
 
-        let str1 = from_utf8(
-            store
-                .get(&self.key1)
-                .map(|b| b.as_ref())
-                .unwrap_or_default(),
-        )
-        .unwrap_or_default();
+        let value1 = store.get(&self.key1).unwrap_or_default();
+        let value2 = store.get(&self.key2).unwrap_or_default();
 
-        let str2 = from_utf8(
-            store
-                .get(&self.key2)
-                .map(|b| b.as_ref())
-                .unwrap_or_default(),
-        )
-        .unwrap_or_default();
+        let str1 = from_utf8(&value1).unwrap_or_default();
+        let str2 = from_utf8(&value2).unwrap_or_default();
 
         let res = lcs(str1, str2);
 
@@ -74,13 +63,14 @@ impl TryFrom<&mut CommandParser> for Lcs {
 
 #[cfg(test)]
 mod tests {
+    use bytes::Bytes;
+
     use super::*;
     use crate::commands::Command;
-    use bytes::Bytes;
 
     #[tokio::test]
     async fn no_match() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -99,7 +89,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("1"));
             store.set(String::from("bar"), Bytes::from("2"));
         }
@@ -111,7 +101,7 @@ mod tests {
 
     #[tokio::test]
     async fn full_match() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -130,7 +120,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("abc"));
             store.set(String::from("bar"), Bytes::from("abc"));
         }
@@ -142,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn partial_match() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -161,7 +151,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("hello world"));
             store.set(String::from("bar"), Bytes::from("world hello"));
         }
@@ -173,7 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn partial_match_inverted() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -192,7 +182,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("hello world"));
             store.set(String::from("bar"), Bytes::from("world hello"));
         }
@@ -204,7 +194,7 @@ mod tests {
 
     #[tokio::test]
     async fn len() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -224,7 +214,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("hello world"));
             store.set(String::from("bar"), Bytes::from("world hello"));
         }
@@ -236,7 +226,7 @@ mod tests {
 
     #[tokio::test]
     async fn len_no_match() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -256,7 +246,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("1"));
             store.set(String::from("bar"), Bytes::from("2"));
         }
@@ -268,7 +258,7 @@ mod tests {
 
     #[tokio::test]
     async fn len_full_match() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -288,7 +278,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("abc"));
             store.set(String::from("bar"), Bytes::from("abc"));
         }
@@ -300,7 +290,7 @@ mod tests {
 
     #[tokio::test]
     async fn len_partial_match() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
@@ -320,7 +310,7 @@ mod tests {
         );
 
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("foo"), Bytes::from("hello world"));
             store.set(String::from("bar"), Bytes::from("world hello"));
         }
@@ -332,7 +322,7 @@ mod tests {
 
     #[tokio::test]
     async fn missing_keys() {
-        let store = Arc::new(Mutex::new(Store::new()));
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("LCS")),
