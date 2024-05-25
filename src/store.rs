@@ -94,8 +94,6 @@ impl InnerStore {
             .cloned()
             .collect();
 
-        println!("Expired keys: {:?}", &expired_keys);
-
         for (when, key) in expired_keys {
             state.remove(&key);
             state.ttls.remove(&(when, key));
@@ -176,13 +174,7 @@ impl State {
 
 async fn expire_keys(store: Arc<InnerStore>) {
     loop {
-        tracing::error!("LOOPPINNGGG");
-        println!("LOOPPINNGGG");
-
         let next_expiration = { store.remove_expired_keys() };
-
-        tracing::error!("next_expiration: {:?}", &next_expiration);
-        println!("next_expiration: {:?}", &next_expiration);
 
         if let Some(next_expiration) = next_expiration {
             tokio::select! {

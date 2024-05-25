@@ -28,7 +28,6 @@ pub struct Setrange {
 impl Executable for Setrange {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let mut store = store.lock();
-        // let current_value = store.get(&self.key).map(|b| b.as_ref()).unwrap_or_default();
         let current_value = store.get(&self.key).unwrap_or_default();
 
         let offset = self.offset as usize;
