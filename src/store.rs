@@ -27,7 +27,7 @@ impl Store {
 
         tokio::spawn({
             let inner = inner.clone();
-            async move { expire_keys(inner).await }
+            async move { remove_expired_keys(inner).await }
         });
 
         Self { inner }
@@ -56,6 +56,12 @@ impl Deref for Store {
 impl InnerStore {
     pub fn lock(&self) -> MutexGuard<State> {
         self.state.lock().unwrap()
+    }
+
+    pub fn set2(&self, key: Key, value: NewValue) {
+        let mut state = self.lock();
+        state.set2(key, value);
+        self.waker.notify_one();
     }
 
     pub fn incr_by<T>(&self, key: &str, increment: T) -> Result<T, String>
@@ -172,7 +178,7 @@ impl State {
     }
 }
 
-async fn expire_keys(store: Arc<InnerStore>) {
+async fn remove_expired_keys(store: Arc<InnerStore>) {
     loop {
         let next_expiration = { store.remove_expired_keys() };
 
@@ -199,7 +205,7 @@ mod tests {
 
         let store = Store::new();
 
-        store.lock().set2(
+        store.set2(
             "key1".to_string(),
             NewValue {
                 data: Bytes::from("value1"),
@@ -207,7 +213,7 @@ mod tests {
             },
         );
 
-        store.lock().set2(
+        store.set2(
             "key2".to_string(),
             NewValue {
                 data: Bytes::from("value2"),
@@ -222,6 +228,20 @@ mod tests {
 
         assert_eq!(store.lock().keys().count(), 1);
         assert!(store.lock().exists("key2"));
+
+        time::advance(Duration::from_secs(20)).await;
+        time::sleep(Duration::from_millis(1)).await;
+        assert_eq!(store.lock().keys().count(), 0);
+
+        store.set2(
+            "key3".to_string(),
+            NewValue {
+                data: Bytes::from("value3"),
+                ttl: Some(Duration::from_secs(20)),
+            },
+        );
+
+        assert_eq!(store.lock().keys().count(), 1);
 
         time::advance(Duration::from_secs(20)).await;
         time::sleep(Duration::from_millis(1)).await;
