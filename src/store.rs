@@ -180,7 +180,7 @@ impl State {
 
 async fn remove_expired_keys(store: Arc<InnerStore>) {
     loop {
-        let next_expiration = { store.remove_expired_keys() };
+        let next_expiration = store.remove_expired_keys();
 
         if let Some(next_expiration) = next_expiration {
             tokio::select! {
