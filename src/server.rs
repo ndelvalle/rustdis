@@ -1,5 +1,4 @@
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info, instrument};
@@ -17,7 +16,7 @@ pub async fn run() -> Result<(), Error> {
     tracing::subscriber::set_global_default(subscriber)?;
 
     let listener = TcpListener::bind(("127.0.0.1", PORT)).await?;
-    let store = Arc::new(Mutex::new(Store::new()));
+    let store = Store::new();
 
     info!("Redis server listening on {}", listener.local_addr()?);
 
@@ -42,7 +41,7 @@ pub async fn run() -> Result<(), Error> {
 async fn handle_connection(
     stream: TcpStream,
     client_address: SocketAddr,
-    store: Arc<Mutex<Store>>,
+    store: Store,
 ) -> Result<(), Error> {
     let mut conn = Connection::new(stream, client_address);
 

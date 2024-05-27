@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -20,9 +18,9 @@ pub struct Type {
 }
 
 impl Executable for Type {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
-        let type_ = store
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let state = store.lock();
+        let type_ = state
             .get(&self.key)
             .map(|_| "string".to_string())
             .unwrap_or_else(|| "none".to_string());
@@ -42,12 +40,15 @@ impl TryFrom<&mut CommandParser> for Type {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn existing_key() {
+    use super::*;
+    use crate::commands::Command;
+
+    #[tokio::test]
+    async fn existing_key() {
+        let store = Store::new();
+
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("TYPE")),
             Frame::Bulk(Bytes::from("key1")),
@@ -61,19 +62,17 @@ mod tests {
             })
         );
 
-        let store = Arc::new(Mutex::new(Store::new()));
-        {
-            let mut store = store.lock().unwrap();
-            store.set(String::from("key1"), Bytes::from("1"));
-        }
+        store.lock().set(String::from("key1"), Bytes::from("1"));
 
         let result = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(result, Frame::Simple("string".to_string()));
     }
 
-    #[test]
-    fn missing_key() {
+    #[tokio::test]
+    async fn missing_key() {
+        let store = Store::new();
+
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("TYPE")),
             Frame::Bulk(Bytes::from("key1")),
@@ -86,8 +85,6 @@ mod tests {
                 key: String::from("key1"),
             })
         );
-
-        let store = Arc::new(Mutex::new(Store::new()));
 
         let result = cmd.exec(store.clone()).unwrap();
 

@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -17,8 +16,8 @@ pub struct Set {
 }
 
 impl Executable for Set {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
 
         store.set(self.key, self.value);
 
@@ -40,13 +39,14 @@ impl TryFrom<&mut CommandParser> for Set {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn insert_one() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    use super::*;
+    use crate::commands::Command;
+
+    #[tokio::test]
+    async fn insert_one() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SET")),
@@ -66,12 +66,12 @@ mod tests {
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Simple("OK".to_string()));
-        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("1")));
     }
 
-    #[test]
-    fn overwrite_existing() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn overwrite_existing() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("SET")),
@@ -88,16 +88,13 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("1"));
+        store.lock().set(String::from("key1"), Bytes::from("1"));
 
-        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("1")));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("1")));
 
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Simple("OK".to_string()));
-        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("2")));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("2")));
     }
 }

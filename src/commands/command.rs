@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use strum::VariantNames;
 
 use crate::commands::executable::Executable;
@@ -25,7 +23,7 @@ pub enum Command {
 }
 
 impl Executable for Command {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         match self {
             Self::Root(root) => root.exec(store),
             Self::Docs(docs) => docs.exec(store),
@@ -55,7 +53,7 @@ impl TryFrom<&mut CommandParser> for Command {
 pub struct Root;
 
 impl Executable for Root {
-    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, _store: Store) -> Result<Frame, Error> {
         // TODO: list subcommands
         let cmds = RootCommand::VARIANTS
             .iter()
@@ -70,7 +68,7 @@ impl Executable for Root {
 pub struct Docs;
 
 impl Executable for Docs {
-    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, _store: Store) -> Result<Frame, Error> {
         Ok(Frame::Simple("OK".to_string()))
     }
 }

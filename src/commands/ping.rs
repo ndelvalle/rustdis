@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
@@ -16,7 +15,7 @@ pub struct Ping {
 }
 
 impl Executable for Ping {
-    fn exec(self, _store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, _store: Store) -> Result<Frame, Error> {
         let res = self
             .payload
             .map_or(Frame::Bulk(Bytes::from("PONG")), Frame::Bulk);

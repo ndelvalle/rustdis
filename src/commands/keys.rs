@@ -1,8 +1,6 @@
 use bytes::Bytes;
 use glob_match::glob_match;
 
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -20,8 +18,8 @@ pub struct Keys {
 }
 
 impl Executable for Keys {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
         let matching_keys: Vec<Frame> = store
             .keys()
             .filter(|key| glob_match(self.pattern.as_str(), key))
@@ -43,12 +41,15 @@ impl TryFrom<&mut CommandParser> for Keys {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::commands::{Command, CommandParserError};
     use bytes::Bytes;
 
-    #[test]
-    fn with_wildcard_pattern() {
+    use super::*;
+    use crate::commands::{Command, CommandParserError};
+
+    #[tokio::test]
+    async fn with_wildcard_pattern() {
+        let store = Store::new();
+
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("KEYS")),
             Frame::Bulk(Bytes::from("*")),
@@ -62,9 +63,8 @@ mod tests {
             })
         );
 
-        let store = Arc::new(Mutex::new(Store::new()));
         {
-            let mut store = store.lock().unwrap();
+            let mut store = store.lock();
             store.set(String::from("key1"), Bytes::from("1"));
             store.set(String::from("key2"), Bytes::from("2"));
             store.set(String::from("key3"), Bytes::from("3"));

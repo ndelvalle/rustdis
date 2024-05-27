@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 use std::usize;
 
 use crate::commands::executable::Executable;
@@ -23,8 +22,8 @@ pub struct Getrange {
 }
 
 impl Executable for Getrange {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
         let value = store.get(&self.key);
         let bytes = match value {
             Some(val) => val,
@@ -74,13 +73,12 @@ impl TryFrom<&mut CommandParser> for Getrange {
 mod tests {
     use bytes::Bytes;
 
+    use super::*;
     use crate::commands::Command;
 
-    use super::*;
-
-    #[test]
-    fn when_key_exists_using_positive_index() {
-        let store = Arc::new(Mutex::new(Store::default()));
+    #[tokio::test]
+    async fn when_key_exists_using_positive_index() {
+        let store = Store::default();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GETRANGE")),
@@ -100,16 +98,15 @@ mod tests {
 
         store
             .lock()
-            .unwrap()
             .set("mykey".to_string(), Bytes::from("This is a string"));
 
         let res = cmd.exec(store.clone()).unwrap();
         assert_eq!(res, Frame::Bulk(Bytes::from("This")));
     }
 
-    #[test]
-    fn when_key_exists_using_negative_index() {
-        let store = Arc::new(Mutex::new(Store::default()));
+    #[tokio::test]
+    async fn when_key_exists_using_negative_index() {
+        let store = Store::default();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GETRANGE")),
@@ -129,16 +126,15 @@ mod tests {
 
         store
             .lock()
-            .unwrap()
             .set("mykey".to_string(), Bytes::from("This is a string"));
 
         let res = cmd.exec(store.clone()).unwrap();
         assert_eq!(res, Frame::Bulk(Bytes::from("ing")));
     }
 
-    #[test]
-    fn when_key_exists_using_positive_and_negative_index() {
-        let store = Arc::new(Mutex::new(Store::default()));
+    #[tokio::test]
+    async fn when_key_exists_using_positive_and_negative_index() {
+        let store = Store::default();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GETRANGE")),
@@ -158,16 +154,15 @@ mod tests {
 
         store
             .lock()
-            .unwrap()
             .set("mykey".to_string(), Bytes::from("This is a string"));
 
         let res = cmd.exec(store.clone()).unwrap();
         assert_eq!(res, Frame::Bulk(Bytes::from("This is a string")));
     }
 
-    #[test]
-    fn when_key_exists_using_out_of_bound_index() {
-        let store = Arc::new(Mutex::new(Store::default()));
+    #[tokio::test]
+    async fn when_key_exists_using_out_of_bound_index() {
+        let store = Store::default();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("GETRANGE")),
@@ -187,7 +182,6 @@ mod tests {
 
         store
             .lock()
-            .unwrap()
             .set("mykey".to_string(), Bytes::from("This is a string"));
 
         let res = cmd.exec(store.clone()).unwrap();

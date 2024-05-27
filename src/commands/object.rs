@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
@@ -21,7 +20,7 @@ pub struct Encoding {
 }
 
 impl Executable for Object {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         match self {
             Self::Encoding(encoding) => encoding.exec(store),
         }
@@ -49,8 +48,8 @@ impl TryFrom<&mut CommandParser> for Object {
 }
 
 impl Executable for Encoding {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
         let res = if store.exists(&self.key) {
             Frame::Bulk(Bytes::from("raw"))
         } else {

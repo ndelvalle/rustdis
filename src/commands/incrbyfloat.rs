@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::frame::Frame;
@@ -27,9 +25,8 @@ pub struct IncrByFloat {
 }
 
 impl Executable for IncrByFloat {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let res = store.lock().unwrap().incr_by(&self.key, self.increment);
-
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let res = store.incr_by(&self.key, self.increment);
         match res {
             Ok(res) => Ok(Frame::Simple(res.to_string())),
             Err(msg) => Ok(Frame::Error(msg.to_string())),
@@ -50,13 +47,14 @@ impl TryFrom<&mut CommandParser> for IncrByFloat {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn existing_key() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    use super::*;
+    use crate::commands::Command;
+
+    #[tokio::test]
+    async fn existing_key() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("INCRBYFLOAT")),
@@ -73,23 +71,17 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("10.50"));
+        store.lock().set(String::from("key1"), Bytes::from("10.50"));
 
         let result = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(result, Frame::Simple("10.6".to_string()));
-        assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("10.6"))
-        );
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("10.6")));
     }
 
-    #[test]
-    fn non_existing_key() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn non_existing_key() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("INCRBYFLOAT")),
@@ -109,12 +101,12 @@ mod tests {
         let result = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(result, Frame::Simple("10".to_string()));
-        assert_eq!(store.lock().unwrap().get("key1"), Some(&Bytes::from("10")));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("10")));
     }
 
-    #[test]
-    fn invalid_key_type() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn invalid_key_type() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("INCRBYFLOAT")),
@@ -131,10 +123,7 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("value"));
+        store.lock().set(String::from("key1"), Bytes::from("value"));
 
         let result = cmd.exec(store.clone()).unwrap();
 
@@ -142,10 +131,6 @@ mod tests {
             result,
             Frame::Error("value is not of the correct type or out of range".to_string())
         );
-
-        assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("value"))
-        );
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("value")));
     }
 }

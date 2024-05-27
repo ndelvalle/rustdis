@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
 
 use std::{str, vec};
 
@@ -18,8 +17,8 @@ pub struct Scan {
 }
 
 impl Executable for Scan {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
 
         let next_cursor = Frame::Bulk(Bytes::from("0"));
         let keys: Vec<Frame> = store

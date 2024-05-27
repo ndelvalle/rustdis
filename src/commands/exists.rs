@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
 use crate::commands::CommandParserError;
@@ -18,8 +16,8 @@ pub struct Exists {
 }
 
 impl Executable for Exists {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let store = store.lock();
         let count = self.keys.iter().filter(|key| store.exists(key)).count();
         Ok(Frame::Integer(count as i64))
     }
@@ -49,9 +47,8 @@ impl TryFrom<&mut CommandParser> for Exists {
 mod tests {
     use bytes::Bytes;
 
-    use crate::commands::Command;
-
     use super::*;
+    use crate::commands::Command;
 
     #[test]
     fn multiple_keys() {

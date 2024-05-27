@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use bytes::Bytes;
 
 use crate::commands::executable::Executable;
@@ -17,14 +15,14 @@ pub struct Mset {
 }
 
 impl Executable for Mset {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
+    fn exec(self, store: Store) -> Result<Frame, Error> {
         if self.pairs.is_empty() {
             return Ok(Frame::Error(
                 "ERR wrong number of arguments for command".to_string(),
             ));
         }
 
-        let mut store = store.lock().unwrap();
+        let mut store = store.lock();
 
         for (key, value) in self.pairs.iter() {
             store.set(key.to_string(), value.clone());
@@ -67,9 +65,9 @@ mod tests {
     use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn insert_one() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn insert_one() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MSET")),
@@ -89,15 +87,12 @@ mod tests {
 
         assert_eq!(res, Frame::Simple("OK".to_string()));
 
-        assert_eq!(
-            store.lock().unwrap().get("key1").unwrap(),
-            &Bytes::from("value1")
-        );
+        assert_eq!(store.lock().get("key1").unwrap(), Bytes::from("value1"));
     }
 
-    #[test]
-    fn insert_many() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn insert_many() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MSET")),
@@ -124,26 +119,14 @@ mod tests {
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Simple("OK".to_string()));
-
-        assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("value1")),
-        );
-
-        assert_eq!(
-            store.lock().unwrap().get("key2"),
-            Some(&Bytes::from("value2")),
-        );
-
-        assert_eq!(
-            store.lock().unwrap().get("key3"),
-            Some(&Bytes::from("value3")),
-        );
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("value1")),);
+        assert_eq!(store.lock().get("key2"), Some(Bytes::from("value2")),);
+        assert_eq!(store.lock().get("key3"), Some(Bytes::from("value3")),);
     }
 
-    #[test]
-    fn overide_existing() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn overide_existing() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("MSET")),
@@ -159,24 +142,17 @@ mod tests {
             })
         );
 
-        {
-            let mut store = store.lock().unwrap();
-            store.set(String::from("key1"), Bytes::from("1"));
-        }
+        store.lock().set(String::from("key1"), Bytes::from("1"));
 
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Simple("OK".to_string()));
-
-        assert_eq!(
-            store.lock().unwrap().get("key1").unwrap(),
-            &Bytes::from("value1")
-        );
+        assert_eq!(store.lock().get("key1").unwrap(), Bytes::from("value1"));
     }
 
-    #[test]
-    fn no_keys() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn no_keys() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![Frame::Bulk(Bytes::from("MSET"))]);
         let cmd = Command::try_from(frame).unwrap();

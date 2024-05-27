@@ -1,5 +1,4 @@
 use bytes::{Bytes, BytesMut};
-use std::sync::{Arc, Mutex};
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -19,15 +18,15 @@ pub struct Append {
 }
 
 impl Executable for Append {
-    fn exec(self, store: Arc<Mutex<Store>>) -> Result<Frame, Error> {
-        let mut store = store.lock().unwrap();
+    fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
 
         let len = match store.get(&self.key) {
             Some(bytes) => {
                 let new_len = bytes.len() + self.value.len();
                 let mut new_value = BytesMut::with_capacity(new_len);
 
-                new_value.extend_from_slice(bytes);
+                new_value.extend_from_slice(&bytes);
                 new_value.extend_from_slice(&self.value);
 
                 store.set(self.key, new_value.freeze());
@@ -58,13 +57,14 @@ impl TryFrom<&mut CommandParser> for Append {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::commands::Command;
     use bytes::Bytes;
 
-    #[test]
-    fn when_key_does_not_exists() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    use super::*;
+    use crate::commands::Command;
+
+    #[tokio::test]
+    async fn when_key_does_not_exists() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("APPEND")),
@@ -84,12 +84,12 @@ mod tests {
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(3));
-        assert_eq!(store.lock().unwrap().get("foo"), Some(&Bytes::from("baz")));
+        assert_eq!(store.lock().get("foo"), Some(Bytes::from("baz")));
     }
 
-    #[test]
-    fn when_key_exists() {
-        let store = Arc::new(Mutex::new(Store::new()));
+    #[tokio::test]
+    async fn when_key_exists() {
+        let store = Store::new();
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("APPEND")),
@@ -106,17 +106,11 @@ mod tests {
             })
         );
 
-        store
-            .lock()
-            .unwrap()
-            .set(String::from("key1"), Bytes::from("hello"));
+        store.lock().set(String::from("key1"), Bytes::from("hello"));
 
         let res = cmd.exec(store.clone()).unwrap();
 
         assert_eq!(res, Frame::Integer(10));
-        assert_eq!(
-            store.lock().unwrap().get("key1"),
-            Some(&Bytes::from("helloworld"))
-        );
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("helloworld")));
     }
 }
