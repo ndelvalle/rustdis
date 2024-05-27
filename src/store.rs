@@ -132,7 +132,7 @@ impl Value {
 
 pub struct State {
     keys: HashMap<Key, Value>,
-    ttls: BTreeSet<(Instant, String)>,
+    ttls: BTreeSet<(Instant, Key)>,
 }
 
 impl State {
