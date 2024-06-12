@@ -65,9 +65,9 @@ impl InnerStore {
         state.set2(key.clone(), value);
 
         if has_ttl {
-            let next_expiring_key = state.ttls.iter().next().map(|(_, key)| key);
-            let is_next_expiring_key = next_expiring_key == Some(&key);
-            if is_next_expiring_key {
+            let next_to_expire = state.ttls.iter().next().map(|(_, key)| key);
+            let expires_next = next_to_expire == Some(&key);
+            if expires_next {
                 self.waker.notify_one();
             }
         }
