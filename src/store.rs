@@ -59,9 +59,18 @@ impl InnerStore {
     }
 
     pub fn set2(&self, key: Key, value: NewValue) {
+        let has_ttl = value.ttl.is_some();
         let mut state = self.lock();
-        state.set2(key, value);
-        self.waker.notify_one();
+
+        state.set2(key.clone(), value);
+
+        if has_ttl {
+            let next_to_expire = state.ttls.iter().next().map(|(_, key)| key);
+            let expires_next = next_to_expire == Some(&key);
+            if expires_next {
+                self.waker.notify_one();
+            }
+        }
     }
 
     pub fn incr_by<T>(&self, key: &str, increment: T) -> Result<T, String>
