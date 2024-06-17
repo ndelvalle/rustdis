@@ -22,20 +22,12 @@ async fn connect() -> Result<(Connection, Connection), RedisError> {
 async fn test_set_and_get() {
     let (mut our_connection, mut their_connection) = connect().await.unwrap();
 
-    let pipeline = redis::pipe()
-        .cmd("SET")
-        .arg("key_1")
-        .arg(1)
-        .cmd("SET")
-        .arg("key_2")
-        .arg("Argentina")
-        .cmd("GET")
-        .arg("key_1")
-        .cmd("GET")
-        .arg("key_2")
-        .cmd("GET")
-        .arg("nonexistentkey")
-        .clone();
+    let mut pipeline = redis::pipe();
+
+    pipeline.cmd("SET").arg("key_1").arg(1);
+    pipeline.cmd("SET").arg("key_2").arg("Argentina");
+    pipeline.cmd("GET").arg("key_1").cmd("GET");
+    pipeline.arg("key_2").cmd("GET").arg("nonexistentkey");
 
     let our_response: (Value, Value, Value, Value, Value) =
         pipeline.clone().query(&mut our_connection).unwrap();
