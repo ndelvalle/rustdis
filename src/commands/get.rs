@@ -19,7 +19,7 @@ impl Executable for Get {
 
         match value {
             Some(value) => Ok(Frame::Bulk(value.clone())),
-            None => Ok(Frame::Null),
+            None => Ok(Frame::NullBulkString),
         }
     }
 }
@@ -83,6 +83,6 @@ mod tests {
 
         let res = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(res, Frame::Null);
+        assert_eq!(res, Frame::NullBulkString);
     }
 }

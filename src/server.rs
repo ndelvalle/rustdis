@@ -9,7 +9,7 @@ use crate::connection::Connection;
 use crate::store::Store;
 use crate::Error;
 
-const PORT: u16 = 6379;
+const PORT: u16 = 6378;
 
 pub async fn run() -> Result<(), Error> {
     let subscriber = tracing_subscriber::FmtSubscriber::new();
