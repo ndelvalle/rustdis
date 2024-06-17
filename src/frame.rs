@@ -28,8 +28,13 @@ pub enum Frame {
     Error(String),
     Integer(i64),
     Bulk(Bytes),
-    Null,
     Array(Vec<Frame>),
+    // Whereas RESP3 has a dedicated data type for null values, RESP2 has no such type. Instead,
+    // due to historical reasons, the representation of null values in RESP2 is via predetermined
+    // forms of the bulk strings and arrays types.
+    Null,
+    NullBulkString,
+    NullArray,
 }
 
 // Protocol specification: https://redis.io/docs/reference/protocol-spec/
@@ -173,6 +178,20 @@ impl Frame {
                 bytes.extend_from_slice(CRLF);
                 bytes
             }
+            Frame::NullBulkString => {
+                let mut bytes = Vec::with_capacity(4);
+                bytes.push(u8::from(DataType::BulkString));
+                bytes.extend_from_slice("-1".as_bytes());
+                bytes.extend_from_slice(CRLF);
+                bytes
+            }
+            Frame::NullArray => {
+                let mut bytes = Vec::with_capacity(4);
+                bytes.push(u8::from(DataType::Array));
+                bytes.extend_from_slice("-1".as_bytes());
+                bytes.extend_from_slice(CRLF);
+                bytes
+            }
             Frame::Array(arr) => {
                 let length_str = arr.len().to_string();
                 let mut bytes = Vec::with_capacity(1 + length_str.len() + CRLF.len());
@@ -204,6 +223,8 @@ impl fmt::Display for Frame {
             Frame::Integer(i) => write!(f, ":{}", i),
             Frame::Bulk(bytes) => write!(f, "${}", String::from_utf8_lossy(bytes)),
             Frame::Null => write!(f, "$-1"),
+            Frame::NullBulkString => write!(f, "$-1"),
+            Frame::NullArray => write!(f, "*-1"),
             Frame::Array(arr) => {
                 write!(f, "*{}\r\n", arr.len())?;
                 for frame in arr {
