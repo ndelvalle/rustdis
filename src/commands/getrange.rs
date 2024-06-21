@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use std::usize;
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
