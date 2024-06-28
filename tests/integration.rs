@@ -6,7 +6,7 @@ use rustdis::server::run;
 use tokio::time::{sleep, Duration};
 
 async fn connect() -> Result<(Connection, Connection), RedisError> {
-    tokio::spawn(async { run().await });
+    tokio::spawn(async { run(6378).await });
     sleep(Duration::from_millis(100)).await;
 
     let our_client = redis::Client::open("redis://127.0.0.1:6378/")?;

@@ -9,13 +9,12 @@ use crate::connection::Connection;
 use crate::store::Store;
 use crate::Error;
 
-const PORT: u16 = 6378;
 
-pub async fn run() -> Result<(), Error> {
+pub async fn run(port: u16) -> Result<(), Error> {
     let subscriber = tracing_subscriber::FmtSubscriber::new();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    let listener = TcpListener::bind(("127.0.0.1", PORT)).await?;
+    let listener = TcpListener::bind(("127.0.0.1", port)).await?;
     let store = Store::new();
 
     info!("Redis server listening on {}", listener.local_addr()?);
