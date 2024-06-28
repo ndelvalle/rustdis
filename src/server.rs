@@ -9,7 +9,6 @@ use crate::connection::Connection;
 use crate::store::Store;
 use crate::Error;
 
-
 pub async fn run(port: u16) -> Result<(), Error> {
     let subscriber = tracing_subscriber::FmtSubscriber::new();
     tracing::subscriber::set_global_default(subscriber)?;
