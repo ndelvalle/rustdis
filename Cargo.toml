@@ -31,5 +31,5 @@ strum_macros = "0.26.2"
 clap = { version = "4.5.7", features = ["derive", "env"] }
 
 [dev-dependencies]
-redis = "0.25.4"
+redis = { version = "0.25.4", features = ["tokio-comp", "aio"] }
 tokio = { version = "1.35.0", features = ["full", "test-util"] }
