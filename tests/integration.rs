@@ -36,6 +36,14 @@ where
         .await
         .unwrap();
 
+    // Since we use the same Redis instance for all tests, we flush it to start fresh.
+    // NOTE: our implementation doesn't yet persist data between runs.
+    let _: Value = redis::pipe()
+        .cmd("FLUSHDB")
+        .query_async(&mut their_connection)
+        .await
+        .unwrap();
+
     let their_response: Res = pipeline
         .clone()
         .query_async(&mut their_connection)
@@ -111,6 +119,23 @@ async fn test_exists() {
         p.cmd("EXISTS").arg("exists_key_1");
         p.cmd("EXISTS").arg("exists_key_2");
         p.cmd("EXISTS").arg("exists_key_3");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_incr() {
+    type Response = (Value, Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("incr_key_1").arg(1);
+        p.cmd("SET").arg("incr_key_2").arg(1);
+        p.cmd("SET").arg("incr_key_3").arg("1");
+
+        p.cmd("INCR").arg("incr_key_1");
+        p.cmd("INCR").arg("incr_key_2");
+        p.cmd("INCR").arg("incr_key_3");
+        p.cmd("INCR").arg("incr_key_4");
     })
     .await;
 }
