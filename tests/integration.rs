@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use redis::aio::MultiplexedConnection;
-use redis::AsyncCommands;
+use redis::FromRedisValue;
 use redis::RedisError;
 use redis::Value;
 use rustdis::server::run;
@@ -20,33 +20,23 @@ async fn connect() -> Result<(MultiplexedConnection, MultiplexedConnection), Red
     Ok((our_connection, their_connection))
 }
 
-#[tokio::test]
-async fn test_set_and_get() {
+async fn test_compare<Res>(f: impl FnOnce(&mut redis::Pipeline))
+where
+    Res: std::fmt::Debug + PartialEq + Send + FromRedisValue,
+{
     let (mut our_connection, mut their_connection) = connect().await.unwrap();
 
     let mut pipeline = redis::pipe();
 
-    pipeline.cmd("SET").arg("key_1").arg(1);
-    pipeline.cmd("SET").arg("key_2").arg("Argentina");
-    pipeline
-        .cmd("SET")
-        .arg("key_3")
-        .arg(Bytes::from("Hello, World!").as_ref());
+    f(&mut pipeline);
 
-    pipeline.cmd("GET").arg("key_1");
-    pipeline.cmd("GET").arg("key_2");
-    pipeline.cmd("GET").arg("key_3");
-    pipeline.cmd("GET").arg("nonexistentkey");
-
-    type Response = (Value, Value, Value, Value, Value, Value, Value);
-
-    let our_response: Response = pipeline
+    let our_response: Res = pipeline
         .clone()
         .query_async(&mut our_connection)
         .await
         .unwrap();
 
-    let their_response: Response = pipeline
+    let their_response: Res = pipeline
         .clone()
         .query_async(&mut their_connection)
         .await
@@ -56,26 +46,26 @@ async fn test_set_and_get() {
 }
 
 #[tokio::test]
+async fn test_set_and_get() {
+    type Response = (Value, Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("set_get_key_1").arg(1);
+        p.cmd("SET").arg("set_get_key_2").arg("Argentina");
+        p.cmd("SET")
+            .arg("set_get_key_3")
+            .arg(Bytes::from("Hello, World!").as_ref());
+
+        p.cmd("GET").arg("set_get_key_1");
+        p.cmd("GET").arg("set_get_key_2");
+        p.cmd("GET").arg("set_get_key_3");
+        p.cmd("GET").arg("set_get_nonexistentkey");
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn test_remove() {
-    let (mut our_connection, mut their_connection) = connect().await.unwrap();
-
-    let mut pipeline = redis::pipe();
-
-    pipeline.cmd("SET").arg("key_1").arg(1);
-    pipeline.cmd("SET").arg("key_2").arg("Argentina");
-    pipeline.cmd("SET").arg("key_3").arg("Thailand");
-    pipeline.cmd("SET").arg("key_4").arg("Netherlands");
-
-    pipeline.cmd("DEL").arg("key_1");
-    pipeline.cmd("DEL").arg("key_2");
-    pipeline.cmd("DEL").arg("key_3").arg("key_4");
-    pipeline.cmd("DEL").arg("nonexistentkey");
-
-    pipeline.cmd("GET").arg("key_1");
-    pipeline.cmd("GET").arg("key_2");
-    pipeline.cmd("GET").arg("key_3");
-    pipeline.cmd("GET").arg("key_4");
-
     type Response = (
         Value,
         Value,
@@ -91,17 +81,36 @@ async fn test_remove() {
         Value,
     );
 
-    let our_response: Response = pipeline
-        .clone()
-        .query_async(&mut our_connection)
-        .await
-        .unwrap();
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("del_key_1").arg(1);
+        p.cmd("SET").arg("del_key_2").arg("Argentina");
+        p.cmd("SET").arg("del_key_3").arg("Thailand");
+        p.cmd("SET").arg("del_key_4").arg("Netherlands");
 
-    let their_response: Response = pipeline
-        .clone()
-        .query_async(&mut their_connection)
-        .await
-        .unwrap();
+        p.cmd("DEL").arg("del_key_1");
+        p.cmd("DEL").arg("del_key_2");
+        p.cmd("DEL").arg("del_key_3").arg("key_4");
+        p.cmd("DEL").arg("del_nonexistentkey");
 
-    assert_eq!(our_response, their_response);
+        p.cmd("GET").arg("del_key_1");
+        p.cmd("GET").arg("del_key_2");
+        p.cmd("GET").arg("del_key_3");
+        p.cmd("GET").arg("del_key_4");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_exists() {
+    type Response = (Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("exists_key_1").arg(1);
+        p.cmd("SET").arg("exists_key_2").arg("Argentina");
+
+        p.cmd("EXISTS").arg("exists_key_1");
+        p.cmd("EXISTS").arg("exists_key_2");
+        p.cmd("EXISTS").arg("exists_key_3");
+    })
+    .await;
 }
