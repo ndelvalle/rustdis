@@ -54,3 +54,54 @@ async fn test_set_and_get() {
 
     assert_eq!(our_response, their_response);
 }
+
+#[tokio::test]
+async fn test_remove() {
+    let (mut our_connection, mut their_connection) = connect().await.unwrap();
+
+    let mut pipeline = redis::pipe();
+
+    pipeline.cmd("SET").arg("key_1").arg(1);
+    pipeline.cmd("SET").arg("key_2").arg("Argentina");
+    pipeline.cmd("SET").arg("key_3").arg("Thailand");
+    pipeline.cmd("SET").arg("key_4").arg("Netherlands");
+
+    pipeline.cmd("DEL").arg("key_1");
+    pipeline.cmd("DEL").arg("key_2");
+    pipeline.cmd("DEL").arg("key_3").arg("key_4");
+    pipeline.cmd("DEL").arg("nonexistentkey");
+
+    pipeline.cmd("GET").arg("key_1");
+    pipeline.cmd("GET").arg("key_2");
+    pipeline.cmd("GET").arg("key_3");
+    pipeline.cmd("GET").arg("key_4");
+
+    type Response = (
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+    );
+
+    let our_response: Response = pipeline
+        .clone()
+        .query_async(&mut our_connection)
+        .await
+        .unwrap();
+
+    let their_response: Response = pipeline
+        .clone()
+        .query_async(&mut their_connection)
+        .await
+        .unwrap();
+
+    assert_eq!(our_response, their_response);
+}
