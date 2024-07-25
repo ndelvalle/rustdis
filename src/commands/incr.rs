@@ -16,7 +16,7 @@ impl Executable for Incr {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let res = store.incr_by(&self.key, 1);
         match res {
-            Ok(_) => Ok(Frame::Simple("OK".to_string())),
+            Ok(val) => Ok(Frame::Integer(val)),
             Err(msg) => Ok(Frame::Error(msg.to_string())),
         }
     }
@@ -60,7 +60,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(2));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("2")));
     }
 
@@ -83,7 +83,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(1));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("1")));
     }
 
