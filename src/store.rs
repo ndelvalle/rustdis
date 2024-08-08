@@ -77,13 +77,13 @@ impl InnerStore {
     where
         T: FromStr + ToString + AddAssign + Default,
     {
-        let err = "value is not of the correct type or out of range".to_string();
+        let err = "value is not an integer or out of range";
         let mut state = self.lock();
 
         let mut value = match state.get(key) {
             Some(value) => match std::str::from_utf8(value.as_ref())
-                .map_err(|_| err.clone())
-                .and_then(|s| s.parse::<T>().map_err(|_| err.clone()))
+                .map_err(|_| err.to_string())
+                .and_then(|s| s.parse::<T>().map_err(|_| err.to_string()))
             {
                 Ok(value) => value,
                 Err(e) => return Err(e),
@@ -92,7 +92,6 @@ impl InnerStore {
         };
 
         value += increment;
-
         state.set(key.to_string(), value.to_string().into());
 
         Ok(value)

@@ -15,9 +15,8 @@ pub struct Decr {
 impl Executable for Decr {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let res = store.incr_by(&self.key, -1);
-
         match res {
-            Ok(_) => Ok(Frame::Simple("OK".to_string())),
+            Ok(val) => Ok(Frame::Integer(val)),
             Err(msg) => Ok(Frame::Error(msg.to_string())),
         }
     }
@@ -57,12 +56,12 @@ mod tests {
             })
         );
 
-        store.lock().set(String::from("key1"), Bytes::from("1"));
+        store.lock().set(String::from("key1"), Bytes::from("9"));
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
-        assert_eq!(store.lock().get("key1"), Some(Bytes::from("0")));
+        assert_eq!(result, Frame::Integer(8));
+        assert_eq!(store.lock().get("key1"), Some(Bytes::from("8")));
     }
 
     #[tokio::test]
@@ -84,7 +83,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(-1));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("-1")));
     }
 
@@ -111,7 +110,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Frame::Error("value is not of the correct type or out of range".to_string())
+            Frame::Error("value is not an integer or out of range".to_string())
         );
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("value")));
     }
@@ -141,7 +140,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Frame::Error("value is not of the correct type or out of range".to_string())
+            Frame::Error("value is not an integer or out of range".to_string())
         );
 
         assert_eq!(
