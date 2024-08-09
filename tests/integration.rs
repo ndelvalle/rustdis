@@ -58,16 +58,31 @@ async fn test_set_and_get() {
     type Response = (Value, Value, Value, Value, Value, Value, Value);
 
     test_compare::<Response>(|p| {
-        p.cmd("SET").arg("set_get_key_1").arg(1);
+        let bytes = Bytes::from("Hello, World!");
+        p.cmd("SET").arg("set_get_key_1").arg(bytes.as_ref());
         p.cmd("SET").arg("set_get_key_2").arg("Argentina");
-        p.cmd("SET")
-            .arg("set_get_key_3")
-            .arg(Bytes::from("Hello, World!").as_ref());
+        p.cmd("SET").arg("set_get_key_3").arg(1);
 
         p.cmd("GET").arg("set_get_key_1");
         p.cmd("GET").arg("set_get_key_2");
         p.cmd("GET").arg("set_get_key_3");
         p.cmd("GET").arg("set_get_nonexistentkey");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_set_args() {
+    type Response = (Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("set_args_key_1").arg(1).arg("XX");
+        p.cmd("SET").arg("set_args_key_1").arg(2).arg("NX");
+        p.cmd("SET").arg("set_args_key_1").arg(3).arg("XX");
+        p.cmd("GET").arg("set_args_key_1");
+
+        p.cmd("SET").arg("set_args_key_2").arg(1).arg("GET");
+        p.cmd("SET").arg("set_args_key_2").arg(2).arg("GET");
     })
     .await;
 }

@@ -117,6 +117,7 @@ pub enum Command {
 
 impl Executable for Command {
     fn exec(self, store: Store) -> Result<Frame, Error> {
+        // TODO: can we use a macro for this patter matching ???
         match self {
             Command::Append(cmd) => cmd.exec(store),
             Command::Client(cmd) => cmd.exec(store),
@@ -171,6 +172,7 @@ impl TryFrom<Frame> for Command {
             }
         };
 
+        // TODO: should we pass the frame directly ?
         let parser = &mut CommandParser {
             parts: frames.into_iter(),
         };
@@ -219,7 +221,9 @@ impl TryFrom<Frame> for Command {
     }
 }
 
+// TODO: can we use Impl<Iterator> ??? Or Iterator
 struct CommandParser {
+    // parts: dyn Iterator<Item = Frame>,
     parts: vec::IntoIter<Frame>,
 }
 
@@ -339,6 +343,11 @@ impl CommandParser {
             }),
         }
     }
+
+    // TODO: !!!
+    fn has_more(&mut self) -> bool {
+        self.parts.clone().peekable().peek().is_some()
+    }
 }
 
 #[derive(Debug, ThisError, PartialEq)]
@@ -407,7 +416,10 @@ mod tests {
             set_command,
             Command::Set(Set {
                 key: String::from("foo"),
-                value: Bytes::from("baz")
+                value: Bytes::from("baz"),
+                ttl: None,
+                behavior: None,
+                get: false
             })
         );
 
@@ -423,7 +435,10 @@ mod tests {
             set_command,
             Command::Set(Set {
                 key: String::from("foo"),
-                value: Bytes::from("baz")
+                value: Bytes::from("baz"),
+                ttl: None,
+                behavior: None,
+                get: false
             })
         );
 
@@ -439,7 +454,10 @@ mod tests {
             set_command,
             Command::Set(Set {
                 key: String::from("foo"),
-                value: Bytes::from("baz")
+                value: Bytes::from("baz"),
+                ttl: None,
+                behavior: None,
+                get: false
             })
         );
 
@@ -455,7 +473,10 @@ mod tests {
             set_command,
             Command::Set(Set {
                 key: String::from("foo"),
-                value: Bytes::from("baz")
+                value: Bytes::from("baz"),
+                ttl: None,
+                behavior: None,
+                get: false
             })
         );
     }
