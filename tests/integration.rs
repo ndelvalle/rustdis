@@ -27,14 +27,9 @@ where
     let (mut our_connection, mut their_connection) = connect().await.unwrap();
 
     let mut pipeline = redis::pipe();
-
     f(&mut pipeline);
 
-    let our_response: Res = pipeline
-        .clone()
-        .query_async(&mut our_connection)
-        .await
-        .unwrap();
+    let our_response: Result<Res, _> = pipeline.clone().query_async(&mut our_connection).await;
 
     // Since we use the same Redis instance for all tests, we flush it to start fresh.
     // NOTE: our implementation doesn't yet persist data between runs.
@@ -44,11 +39,7 @@ where
         .await
         .unwrap();
 
-    let their_response: Res = pipeline
-        .clone()
-        .query_async(&mut their_connection)
-        .await
-        .unwrap();
+    let their_response: Result<Res, _> = pipeline.clone().query_async(&mut their_connection).await;
 
     assert_eq!(our_response, their_response);
 }
@@ -135,7 +126,71 @@ async fn test_incr() {
         p.cmd("INCR").arg("incr_key_1");
         p.cmd("INCR").arg("incr_key_2");
         p.cmd("INCR").arg("incr_key_3");
+
         p.cmd("INCR").arg("incr_key_4");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_decr() {
+    type Response = (
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+    );
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("decr_key_1").arg(2);
+        p.cmd("SET").arg("decr_key_2").arg(2);
+        p.cmd("SET").arg("decr_key_3").arg("2");
+
+        p.cmd("DECR").arg("decr_key_1");
+        p.cmd("DECR").arg("decr_key_2");
+        p.cmd("DECR").arg("decr_key_3");
+
+        p.cmd("DECR").arg("decr_key_4");
+
+        p.cmd("SET")
+            .arg("decr_key_5")
+            .arg("234293482390480948029348230948");
+        p.cmd("DECR").arg("decr_key_5");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_append() {
+    type Response = (
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+    );
+
+    test_compare::<Response>(|p| {
+        p.cmd("APPEND").arg("append_key_1").arg("hello");
+        p.cmd("APPEND").arg("append_key_1").arg(" World");
+        p.cmd("GET").arg("append_key_1");
+
+        p.cmd("SET").arg("append_key_2").arg(1);
+        p.cmd("APPEND").arg("append_key_2").arg(" hello");
+        p.cmd("GET").arg("append_key_2");
+
+        p.cmd("APPEND").arg("append_key_3").arg(1);
+        p.cmd("APPEND").arg("append_key_3").arg(2);
+        p.cmd("GET").arg("append_key_3");
     })
     .await;
 }
