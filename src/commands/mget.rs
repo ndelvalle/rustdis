@@ -28,7 +28,7 @@ impl Executable for Mget {
             .map(|value| {
                 value
                     .map(|v| Frame::Bulk(v.clone()))
-                    .unwrap_or_else(|| Frame::Null)
+                    .unwrap_or_else(|| Frame::NullBulkString)
             })
             .collect::<Vec<_>>();
 
@@ -151,7 +151,7 @@ mod tests {
 
         let res = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(res, Frame::Array(vec![Frame::Null]));
+        assert_eq!(res, Frame::Array(vec![Frame::NullBulkString]));
     }
 
     #[tokio::test]
@@ -189,7 +189,7 @@ mod tests {
             res,
             Frame::Array(vec![
                 Frame::Bulk(Bytes::from("1")),
-                Frame::Null,
+                Frame::NullBulkString,
                 Frame::Bulk(Bytes::from("3"))
             ])
         );

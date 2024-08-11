@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tracing::{error, info, instrument};
+use tracing::{debug, error, info, instrument};
 
 use crate::commands::executable::Executable;
 use crate::commands::Command;
@@ -10,8 +10,9 @@ use crate::store::Store;
 use crate::Error;
 
 pub async fn run(port: u16) -> Result<(), Error> {
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    tracing::subscriber::set_global_default(subscriber)?;
+    let _ = tracing_subscriber::fmt()
+        .try_init()
+        .map_err(|e| debug!("Failed to initialize global tracing: {}", e));
 
     let listener = TcpListener::bind(("127.0.0.1", port)).await?;
     let store = Store::new();

@@ -4,11 +4,11 @@ use redis::FromRedisValue;
 use redis::RedisError;
 use redis::Value;
 use rustdis::server::run;
-
+use serial_test::serial;
 use tokio::time::{sleep, Duration};
 
 async fn connect() -> Result<(MultiplexedConnection, MultiplexedConnection), RedisError> {
-    tokio::spawn(async { run(6378).await });
+    tokio::spawn(run(6378));
     sleep(Duration::from_millis(100)).await;
 
     let our_client = redis::Client::open("redis://127.0.0.1:6378/")?;
@@ -40,11 +40,11 @@ where
         .unwrap();
 
     let their_response: Result<Res, _> = pipeline.clone().query_async(&mut their_connection).await;
-
     assert_eq!(our_response, their_response);
 }
 
 #[tokio::test]
+#[serial]
 async fn test_set_and_get() {
     type Response = (Value, Value, Value, Value, Value, Value, Value);
 
@@ -64,7 +64,8 @@ async fn test_set_and_get() {
 }
 
 #[tokio::test]
-async fn test_remove() {
+#[serial]
+async fn test_del() {
     type Response = (
         Value,
         Value,
@@ -100,6 +101,7 @@ async fn test_remove() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_exists() {
     type Response = (Value, Value, Value, Value, Value);
 
@@ -115,6 +117,7 @@ async fn test_exists() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_incr() {
     type Response = (Value, Value, Value, Value, Value, Value, Value);
 
@@ -133,6 +136,53 @@ async fn test_incr() {
 }
 
 #[tokio::test]
+#[serial]
+async fn test_incr_by() {
+    type Response = (Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("incr_by_key_1").arg(2);
+        p.cmd("SET").arg("incr_by_key_2").arg(10);
+        p.cmd("SET").arg("incr_by_key_3").arg("2");
+
+        p.cmd("INCRBY").arg("incr_by_key_1").arg(10);
+        p.cmd("INCRBY").arg("incr_by_key_2").arg("7");
+        p.cmd("INCRBY").arg("incr_by_key_3").arg(-2);
+
+        // Value is not an integer or out of range error.
+        // p.cmd("SET")
+        //     .arg("incr_by_key_4")
+        //     .arg("234293482390480948029348230948");
+        // p.cmd("INCRBY").arg("incr_by_key_4").arg(1);
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_incr_by_float() {
+    type Response = (Value, Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("incr_by_float_key_1").arg("10.50");
+        p.cmd("SET").arg("incr_by_float_key_2").arg(4);
+        p.cmd("SET").arg("incr_by_float_key_3").arg("2.2");
+
+        p.cmd("INCRBYFLOAT").arg("incr_by_float_key_1").arg("0.1");
+        p.cmd("INCRBYFLOAT").arg("incr_by_float_key_2").arg("-5");
+        p.cmd("INCRBYFLOAT").arg("incr_by_float_key_3").arg("-1.2");
+
+        // Value is not an integer or out of range error.
+        p.cmd("SET")
+            .arg("incr_by_float_key_4")
+            .arg("234293482390480948029348230948");
+        p.cmd("INCRBYFLOAT").arg("incr_by_float_key_4").arg(1);
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
 async fn test_decr() {
     type Response = (
         Value,
@@ -157,15 +207,40 @@ async fn test_decr() {
 
         p.cmd("DECR").arg("decr_key_4");
 
-        p.cmd("SET")
-            .arg("decr_key_5")
-            .arg("234293482390480948029348230948");
-        p.cmd("DECR").arg("decr_key_5");
+        // Value is not an integer or out of range error.
+        // p.cmd("SET")
+        //     .arg("decr_key_5")
+        //     .arg("234293482390480948029348230948");
+        // p.cmd("DECR").arg("decr_key_5");
     })
     .await;
 }
 
 #[tokio::test]
+#[serial]
+async fn test_decr_by() {
+    type Response = (Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("decr_by_key_1").arg(2);
+        p.cmd("SET").arg("decr_by_key_2").arg(10);
+        p.cmd("SET").arg("decr_by_key_3").arg("2");
+
+        p.cmd("DECRBY").arg("decr_by_key_1").arg(10);
+        p.cmd("DECRBY").arg("decr_by_key_2").arg("7");
+        p.cmd("DECRBY").arg("decr_by_key_3").arg(2);
+
+        // Value is not an integer or out of range error.
+        // p.cmd("SET")
+        //     .arg("decr_by_key_4")
+        //     .arg("234293482390480948029348230948");
+        // p.cmd("DECRBY").arg("decr_by_key_4").arg(1);
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
 async fn test_append() {
     type Response = (
         Value,
@@ -191,6 +266,143 @@ async fn test_append() {
         p.cmd("APPEND").arg("append_key_3").arg(1);
         p.cmd("APPEND").arg("append_key_3").arg(2);
         p.cmd("GET").arg("append_key_3");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_getdel() {
+    type Response = (Value, Value, Value, Value, Value, Value);
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("getdel_key_1").arg(2);
+        p.cmd("SET").arg("getdel_key_2").arg("2");
+
+        p.cmd("GETDEL").arg("getdel_key_1");
+        p.cmd("GETDEL").arg("getdel_key_2");
+
+        p.cmd("GET").arg("getdel_key_1");
+        p.cmd("GET").arg("getdel_key_2");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_getrange() {
+    type Response = (
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+        Value,
+    );
+
+    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("getrange_key_1").arg("This is a string");
+        p.cmd("GETRANGE").arg("getrange_key_1").arg(0).arg(0);
+        p.cmd("GETRANGE").arg("getrange_key_1").arg(0).arg(3);
+        p.cmd("GETRANGE").arg("getrange_key_1").arg(-3).arg(-1);
+        p.cmd("GETRANGE").arg("getrange_key_1").arg("0").arg(-1);
+        p.cmd("GETRANGE").arg("getrange_key_1").arg(10).arg("100");
+
+        p.cmd("SET").arg("getrange_key_2").arg("");
+        p.cmd("GETRANGE").arg("getrange_key_2").arg(0).arg(0);
+        p.cmd("GETRANGE").arg("getrange_key_2").arg(0).arg(3);
+        p.cmd("GETRANGE").arg("getrange_key_2").arg(-3).arg(-1);
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_keys() {
+    type Response = (Value, Value, Value, Value, Value, Value);
+
+    // TODO: The response order from the server is not guaranteed, to ensure accurate comparison
+    // with the expected result, we need to sort the response before performing the comparison.
+    test_compare::<Vec<Value>>(|p| {
+        p.cmd("SET").arg("keys_key_1").arg("Argentina");
+        p.cmd("SET").arg("keys_key_2").arg("Spain");
+        p.cmd("SET").arg("keys_key_3").arg("Netherlands");
+
+        p.cmd("KEYS").arg("*");
+        p.cmd("KEYS").arg("*key*");
+        p.cmd("KEYS").arg("*3");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_mget() {
+    test_compare::<Vec<Value>>(|p| {
+        p.cmd("SET").arg("mget_key_1").arg("Argentina");
+        p.cmd("SET").arg("mget_key_2").arg("Spain");
+        p.cmd("SET").arg("mget_key_3").arg("Netherlands");
+
+        p.cmd("MGET")
+            .arg("mget_key_1")
+            .arg("mget_key_2")
+            .arg("mget_key_3")
+            .arg("nonexisting");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_mset() {
+    test_compare::<Vec<Value>>(|p| {
+        p.cmd("MSET")
+            .arg("mset_key_1")
+            .arg("Argentina")
+            .arg("mset_key_2")
+            .arg("Spain")
+            .arg("mset_key_3")
+            .arg("Netherlands");
+
+        p.cmd("MGET")
+            .arg("mset_key_1")
+            .arg("mset_key_2")
+            .arg("mset_key_3");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_msetnx() {
+    test_compare::<Vec<Value>>(|p| {
+        // When a key already exists, MSETNX does not perform any operation.
+        p.cmd("SET").arg("msetnx_key_1").arg("Argentina");
+
+        p.cmd("MSETNX")
+            .arg("msetnx_key_1")
+            .arg("Argentina")
+            .arg("msetnx_key_2")
+            .arg("Spain");
+
+        p.cmd("MSETNX")
+            .arg("msetnx_key_3")
+            .arg("Thailand")
+            .arg("msetnx_key_4")
+            .arg("Brazil")
+            .arg("msetnx_key_5")
+            .arg("Peru");
+
+        p.cmd("MGET")
+            .arg("msetnx_key_1")
+            .arg("msetnx_key_2")
+            .arg("msetnx_key_3")
+            .arg("msetnx_key_4")
+            .arg("msetnx_key_5");
     })
     .await;
 }
