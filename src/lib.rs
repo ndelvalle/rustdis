@@ -9,24 +9,24 @@
 //! # Architecture
 //!
 //! * `server`: Redis server module. Provides a run function that initiates the server, enabling it
-//! to begin handling incoming connections from Redis clients. It manages client requests, executes
-//! Redis commands, and handles connection lifecycles.
+//!     to begin handling incoming connections from Redis clients. It manages client requests, executes
+//!     Redis commands, and handles connection lifecycles.
 //!
 //! * `connection`: The Connection module manages a TCP connection for a Redis client. It separates
-//! the TCP stream into readable and writable components to facilitate data consumption and
-//! transmission. The server uses this connection module to read data from the TCP connection.
+//!     the TCP stream into readable and writable components to facilitate data consumption and
+//!     transmission. The server uses this connection module to read data from the TCP connection.
 //!
 //! * `codec`: This module is responsible for decoding raw TCP byte streams into `Frame` data
-//! structures. This is an essential component for translating incoming client requests into
-//! meaningful Redis commands.
+//!     structures. This is an essential component for translating incoming client requests into
+//!     meaningful Redis commands.
 //!
 //! * `frame`: This module defines the `Frame` enum, representing different types of Redis protocol
-//! messages, and provides parsing and serialization functionalities. It adheres to the RESP (Redis
-//! Serialization Protocol) specifications.
+//!     messages, and provides parsing and serialization functionalities. It adheres to the RESP (Redis
+//!     Serialization Protocol) specifications.
 //!
 //! * `store`: This module provides a simple key-value store for managing Redis string data types.
-//! It supports basic operations such as setting, getting, removing, and incrementing values
-//! associated with keys.
+//!     It supports basic operations such as setting, getting, removing, and incrementing values
+//!     associated with keys.
 //!
 //! ```text
 //!
