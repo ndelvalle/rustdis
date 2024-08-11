@@ -6,7 +6,7 @@ use crate::Error;
 
 /// Decrements the number stored at key by `decrement`.
 ///
-/// Ref: <https://redis.io/docs/latest/commands/incrby/>
+/// Ref: <https://redis.io/docs/latest/commands/decrby/>
 #[derive(Debug, PartialEq)]
 pub struct DecrBy {
     pub key: String,
@@ -18,7 +18,7 @@ impl Executable for DecrBy {
         let res = store.incr_by(&self.key, -self.decrement);
 
         match res {
-            Ok(_) => Ok(Frame::Simple("OK".to_string())),
+            Ok(value) => Ok(Frame::Integer(value)),
             Err(msg) => Ok(Frame::Error(msg.to_string())),
         }
     }
@@ -65,7 +65,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(10));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("10")));
     }
 
@@ -90,7 +90,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(-10));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("-10")));
     }
 

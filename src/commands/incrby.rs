@@ -17,7 +17,7 @@ impl Executable for IncrBy {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let res = store.incr_by(&self.key, self.increment);
         match res {
-            Ok(_) => Ok(Frame::Simple("OK".to_string())),
+            Ok(value) => Ok(Frame::Integer(value)),
             Err(msg) => Ok(Frame::Error(msg.to_string())),
         }
     }
@@ -64,7 +64,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(30));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("30")));
     }
 
@@ -89,7 +89,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("OK".to_string()));
+        assert_eq!(result, Frame::Integer(10));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("10")));
     }
 
