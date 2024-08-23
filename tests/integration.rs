@@ -40,15 +40,46 @@ where
         .unwrap();
 
     let their_response: Result<Res, _> = pipeline.clone().query_async(&mut their_connection).await;
+
+    assert!(our_response.is_ok(), "Not Ok, use `test_compare_err` instead if expecting an error");
+    assert!(their_response.is_ok(), "Not Ok, use `test_compare_err` instead if expecting an error");
+    assert_eq!(our_response, their_response);
+}
+
+/// When the server responds with an error, the client parses it into `Err(RedisError)`,
+/// ignoring all the other values from previous commands in the pipeline.
+///
+/// Thus, when testing errors, we want to run the least number of commands in the pipeline,
+/// because their outputs will be ignored.
+async fn test_compare_err(f: impl FnOnce(&mut redis::Pipeline)) {
+    let (mut our_connection, mut their_connection) = connect().await.unwrap();
+
+    let mut pipeline = redis::pipe();
+    f(&mut pipeline);
+
+    type Res = Result<(), RedisError>;
+
+    let our_response: Res = pipeline.clone().query_async(&mut our_connection).await;
+
+    // Since we use the same Redis instance for all tests, we flush it to start fresh.
+    // NOTE: our implementation doesn't yet persist data between runs.
+    let _: Value = redis::pipe()
+        .cmd("FLUSHDB")
+        .query_async(&mut their_connection)
+        .await
+        .unwrap();
+
+    let their_response: Res = pipeline.clone().query_async(&mut their_connection).await;
+
+    assert!(our_response.is_err(), "Not Err, use `test_compare` instead if expecting a value");
+    assert!(their_response.is_err(), "Not Err, use `test_compare` instead if expecting a value");
     assert_eq!(our_response, their_response);
 }
 
 #[tokio::test]
 #[serial]
 async fn test_set_and_get() {
-    type Response = (Value, Value, Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("set_get_key_1").arg(1);
         p.cmd("SET").arg("set_get_key_2").arg("Argentina");
         p.cmd("SET")
@@ -142,12 +173,15 @@ async fn test_incr_by() {
         p.cmd("INCRBY").arg("incr_by_key_1").arg(10);
         p.cmd("INCRBY").arg("incr_by_key_2").arg("7");
         p.cmd("INCRBY").arg("incr_by_key_3").arg(-2);
+    })
+    .await;
 
+    test_compare_err(|p| {
         // Value is not an integer or out of range error.
-        // p.cmd("SET")
-        //     .arg("incr_by_key_4")
-        //     .arg("234293482390480948029348230948");
-        // p.cmd("INCRBY").arg("incr_by_key_4").arg(1);
+        p.cmd("SET")
+            .arg("incr_by_key_4")
+            .arg("234293482390480948029348230948");
+        p.cmd("INCRBY").arg("incr_by_key_4").arg(1);
     })
     .await;
 }
@@ -163,7 +197,10 @@ async fn test_incr_by_float() {
         p.cmd("INCRBYFLOAT").arg("incr_by_float_key_1").arg("0.1");
         p.cmd("INCRBYFLOAT").arg("incr_by_float_key_2").arg("-5");
         p.cmd("INCRBYFLOAT").arg("incr_by_float_key_3").arg("-1.2");
+    })
+    .await;
 
+    test_compare_err(|p| {
         // Value is not an integer or out of range error.
         p.cmd("SET")
             .arg("incr_by_float_key_4")
@@ -186,12 +223,15 @@ async fn test_decr() {
         p.cmd("DECR").arg("decr_key_3");
 
         p.cmd("DECR").arg("decr_key_4");
+    })
+    .await;
 
+    test_compare_err(|p| {
         // Value is not an integer or out of range error.
-        // p.cmd("SET")
-        //     .arg("decr_key_5")
-        //     .arg("234293482390480948029348230948");
-        // p.cmd("DECR").arg("decr_key_5");
+        p.cmd("SET")
+            .arg("decr_key_5")
+            .arg("234293482390480948029348230948");
+        p.cmd("DECR").arg("decr_key_5");
     })
     .await;
 }
@@ -207,12 +247,15 @@ async fn test_decr_by() {
         p.cmd("DECRBY").arg("decr_by_key_1").arg(10);
         p.cmd("DECRBY").arg("decr_by_key_2").arg("7");
         p.cmd("DECRBY").arg("decr_by_key_3").arg(2);
+    })
+    .await;
 
+    test_compare_err(|p| {
         // Value is not an integer or out of range error.
-        // p.cmd("SET")
-        //     .arg("decr_by_key_4")
-        //     .arg("234293482390480948029348230948");
-        // p.cmd("DECRBY").arg("decr_by_key_4").arg(1);
+        p.cmd("SET")
+            .arg("decr_by_key_4")
+            .arg("234293482390480948029348230948");
+        p.cmd("DECRBY").arg("decr_by_key_4").arg(1);
     })
     .await;
 }
