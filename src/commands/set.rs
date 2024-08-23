@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ttl_exat_and_xx_behavior() {
+    async fn ttl_ex_and_xx_behavior() {
         let store = Store::new();
 
         let frame = Frame::Array(vec![
@@ -227,7 +227,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ttl_xx_behavior() {
+    async fn xx_behavior() {
         let store = Store::new();
 
         store.lock().set(String::from("key1"), Bytes::from("1"));
@@ -258,7 +258,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ttl_nx_behavior() {
+    async fn nx_behavior() {
         let store = Store::new();
 
         let frame = Frame::Array(vec![
@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ttl_ex_and_nx_behavior() {
+    async fn ttl_exat_and_nx_behavior() {
         let store = Store::new();
 
         let frame = Frame::Array(vec![
@@ -318,7 +318,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ttl_ex_and_nx_behavior_and_get_order_swapped() {
+    async fn ttl_exat_and_nx_behavior_and_get_order_swapped() {
         let store = Store::new();
 
         let frame = Frame::Array(vec![
