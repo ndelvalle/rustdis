@@ -65,23 +65,23 @@ async fn test_set_and_get() {
 
 #[tokio::test]
 #[serial]
-async fn test_del() {
-    type Response = (
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-    );
+async fn test_set_args() {
+    test_compare::<Vec<Value>>(|p| {
+        p.cmd("SET").arg("set_args_key_1").arg(1).arg("XX");
+        p.cmd("SET").arg("set_args_key_1").arg(2).arg("NX");
+        p.cmd("SET").arg("set_args_key_1").arg(3).arg("XX");
+        p.cmd("GET").arg("set_args_key_1");
 
-    test_compare::<Response>(|p| {
+        p.cmd("SET").arg("set_args_key_2").arg(1).arg("GET");
+        p.cmd("SET").arg("set_args_key_2").arg(2).arg("GET");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_del() {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("del_key_1").arg(1);
         p.cmd("SET").arg("del_key_2").arg("Argentina");
         p.cmd("SET").arg("del_key_3").arg("Thailand");
@@ -103,9 +103,7 @@ async fn test_del() {
 #[tokio::test]
 #[serial]
 async fn test_exists() {
-    type Response = (Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("exists_key_1").arg(1);
         p.cmd("SET").arg("exists_key_2").arg("Argentina");
 
@@ -119,9 +117,7 @@ async fn test_exists() {
 #[tokio::test]
 #[serial]
 async fn test_incr() {
-    type Response = (Value, Value, Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("incr_key_1").arg(1);
         p.cmd("SET").arg("incr_key_2").arg(1);
         p.cmd("SET").arg("incr_key_3").arg("1");
@@ -138,9 +134,7 @@ async fn test_incr() {
 #[tokio::test]
 #[serial]
 async fn test_incr_by() {
-    type Response = (Value, Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("incr_by_key_1").arg(2);
         p.cmd("SET").arg("incr_by_key_2").arg(10);
         p.cmd("SET").arg("incr_by_key_3").arg("2");
@@ -161,9 +155,7 @@ async fn test_incr_by() {
 #[tokio::test]
 #[serial]
 async fn test_incr_by_float() {
-    type Response = (Value, Value, Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("incr_by_float_key_1").arg("10.50");
         p.cmd("SET").arg("incr_by_float_key_2").arg(4);
         p.cmd("SET").arg("incr_by_float_key_3").arg("2.2");
@@ -184,19 +176,7 @@ async fn test_incr_by_float() {
 #[tokio::test]
 #[serial]
 async fn test_decr() {
-    type Response = (
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-    );
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("decr_key_1").arg(2);
         p.cmd("SET").arg("decr_key_2").arg(2);
         p.cmd("SET").arg("decr_key_3").arg("2");
@@ -219,9 +199,7 @@ async fn test_decr() {
 #[tokio::test]
 #[serial]
 async fn test_decr_by() {
-    type Response = (Value, Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("decr_by_key_1").arg(2);
         p.cmd("SET").arg("decr_by_key_2").arg(10);
         p.cmd("SET").arg("decr_by_key_3").arg("2");
@@ -242,19 +220,7 @@ async fn test_decr_by() {
 #[tokio::test]
 #[serial]
 async fn test_append() {
-    type Response = (
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-    );
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("APPEND").arg("append_key_1").arg("hello");
         p.cmd("APPEND").arg("append_key_1").arg(" World");
         p.cmd("GET").arg("append_key_1");
@@ -273,9 +239,7 @@ async fn test_append() {
 #[tokio::test]
 #[serial]
 async fn test_getdel() {
-    type Response = (Value, Value, Value, Value, Value, Value);
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("getdel_key_1").arg(2);
         p.cmd("SET").arg("getdel_key_2").arg("2");
 
@@ -291,20 +255,7 @@ async fn test_getdel() {
 #[tokio::test]
 #[serial]
 async fn test_getrange() {
-    type Response = (
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-        Value,
-    );
-
-    test_compare::<Response>(|p| {
+    test_compare::<Vec<Value>>(|p| {
         p.cmd("SET").arg("getrange_key_1").arg("This is a string");
         p.cmd("GETRANGE").arg("getrange_key_1").arg(0).arg(0);
         p.cmd("GETRANGE").arg("getrange_key_1").arg(0).arg(3);
@@ -323,8 +274,6 @@ async fn test_getrange() {
 #[tokio::test]
 #[serial]
 async fn test_keys() {
-    type Response = (Value, Value, Value, Value, Value, Value);
-
     // TODO: The response order from the server is not guaranteed, to ensure accurate comparison
     // with the expected result, we need to sort the response before performing the comparison.
     test_compare::<Vec<Value>>(|p| {
