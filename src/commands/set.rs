@@ -41,6 +41,8 @@ impl Ttl {
     pub fn duration(&self) -> Duration {
         match self {
             Ttl::Ex(seconds) => Duration::from_secs(*seconds),
+            Ttl::Px(millis) => Duration::from_millis(*millis),
+            // TODO: EXAT, PXAT and KeepTtl.
             _ => Duration::from_secs(1),
         }
     }
