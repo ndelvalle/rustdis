@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use tokio::time::Duration;
 
 use crate::commands::executable::Executable;
 use crate::commands::{CommandParser, CommandParserError};
@@ -21,8 +22,10 @@ pub struct Set {
 
 #[derive(Debug, PartialEq)]
 pub enum SetBehavior {
-    Nx, // Only set the key if it does not already exist.
-    Xx, // Only set the key if it already exists.
+    /// Only set the key if it does not already exist.
+    Nx,
+    /// Only set the key if it already exists.
+    Xx,
 }
 
 #[derive(Debug, PartialEq)]
@@ -34,10 +37,18 @@ pub enum Ttl {
     KeepTtl, // Retain the time to live associated with the key.
 }
 
+impl Ttl {
+    pub fn duration(&self) -> Duration {
+        match self {
+            Ttl::Ex(seconds) => Duration::from_secs(*seconds),
+            _ => Duration::from_secs(1),
+        }
+    }
+}
+
 impl Executable for Set {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let mut store = store.lock();
-
         let value = store.get(&self.key);
 
         match self.behavior {
@@ -46,7 +57,10 @@ impl Executable for Set {
             _ => {}
         }
 
-        store.set(self.key, self.value);
+        match self.ttl {
+            Some(ttl) => store.set_with_ttl(self.key, self.value, ttl.duration()),
+            None => store.set(self.key, self.value),
+        };
 
         let res = if self.get {
             value.map_or(Frame::NullBulkString, Frame::Bulk)
@@ -69,10 +83,16 @@ impl TryFrom<&mut CommandParser> for Set {
         let mut behavior = None;
         let mut get = false;
 
-        while parser.has_more() {
-            let opt = parser.next_string()?;
+        loop {
+            let option = match parser.next_string() {
+                Ok(option) => option,
+                Err(CommandParserError::EndOfStream) => {
+                    break;
+                }
+                Err(err) => return Err(err.into()),
+            };
 
-            match opt.as_str() {
+            match option.as_str() {
                 // TTL options
                 "EX" if ttl.is_none() => {
                     let val = parser.next_integer()?;
@@ -111,7 +131,7 @@ impl TryFrom<&mut CommandParser> for Set {
                 _ => {
                     return Err(CommandParserError::InvalidCommandArgument {
                         command: "SET".to_string(),
-                        argument: opt,
+                        argument: option,
                     }
                     .into())
                 }
