@@ -7,10 +7,10 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::sync::Notify;
 use tokio::time::{sleep_until, Duration, Instant};
 
-/// The Store is responsible for managing key-value pairs, with optional time-to-live (TTL)
-/// settings for each key. It automatically handles the expiration and removal of keys when their
-/// TTLs elapse. The store is designed to be thread-safe, allowing it to be shared and cloned
-/// cheaply using reference counting.
+/// The Store is responsible for managing key-value pairs, with optional time-to-live settings for
+/// each key. It automatically handles the expiration and removal of keys when their TTLs elapse.
+/// The store is designed to be thread-safe, allowing it to be shared and cloned cheaply using
+/// reference counting.
 #[derive(Clone)]
 pub struct Store {
     inner: Arc<InnerStore>,
