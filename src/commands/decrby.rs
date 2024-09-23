@@ -15,6 +15,7 @@ pub struct DecrBy {
 
 impl Executable for DecrBy {
     fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
         let res = store.incr_by(&self.key, -self.decrement);
 
         match res {

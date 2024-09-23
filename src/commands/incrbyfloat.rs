@@ -26,6 +26,7 @@ pub struct IncrByFloat {
 
 impl Executable for IncrByFloat {
     fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
         let res = store.incr_by(&self.key, self.increment);
         match res {
             Ok(res) => Ok(Frame::Simple(res.to_string())),

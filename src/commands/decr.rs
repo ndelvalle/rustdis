@@ -14,6 +14,7 @@ pub struct Decr {
 
 impl Executable for Decr {
     fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
         let res = store.incr_by(&self.key, -1);
         match res {
             Ok(val) => Ok(Frame::Integer(val)),

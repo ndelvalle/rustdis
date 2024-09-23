@@ -343,11 +343,6 @@ impl CommandParser {
             }),
         }
     }
-
-    // TODO: !!!
-    fn has_more(&mut self) -> bool {
-        self.parts.clone().peekable().peek().is_some()
-    }
 }
 
 #[derive(Debug, ThisError, PartialEq)]

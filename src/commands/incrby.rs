@@ -15,6 +15,7 @@ pub struct IncrBy {
 
 impl Executable for IncrBy {
     fn exec(self, store: Store) -> Result<Frame, Error> {
+        let mut store = store.lock();
         let res = store.incr_by(&self.key, self.increment);
         match res {
             Ok(value) => Ok(Frame::Integer(value)),
