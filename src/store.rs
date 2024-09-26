@@ -85,7 +85,16 @@ impl<'a> InnerStoreLocked<'a> {
     }
 
     pub fn remove(&mut self, key: &str) -> Option<Value> {
-        self.state.keys.remove(key)
+        match self.state.keys.remove(key) {
+            None => None,
+            Some(value) => match value.expires_at {
+                Some(expires_at) => {
+                    self.state.ttls.remove(&(expires_at, key.to_string()));
+                    Some(value)
+                }
+                None => Some(value),
+            },
+        }
     }
 
     pub fn exists(&self, key: &str) -> bool {
