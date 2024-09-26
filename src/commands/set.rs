@@ -94,7 +94,7 @@ impl TryFrom<&mut CommandParser> for Set {
                 Err(err) => return Err(err.into()),
             };
 
-            match option.as_str() {
+            match option.to_uppercase().as_str() {
                 // TTL options
                 "EX" if ttl.is_none() => {
                     let val = parser.next_integer()?;
