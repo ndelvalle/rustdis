@@ -165,6 +165,8 @@ mod tests {
             Frame::Bulk(Bytes::from("SET")),
             Frame::Bulk(Bytes::from("key1")),
             Frame::Bulk(Bytes::from("1")),
+            Frame::Bulk(Bytes::from("EX")),
+            Frame::Bulk(Bytes::from("100")),
         ]);
         let cmd = Command::try_from(frame).unwrap();
 
@@ -173,7 +175,7 @@ mod tests {
             Command::Set(Set {
                 key: String::from("key1"),
                 value: Bytes::from("1"),
-                ttl: None,
+                ttl: Some(Ttl::Ex(100)),
                 behavior: None,
                 get: false
             })
@@ -193,6 +195,8 @@ mod tests {
             Frame::Bulk(Bytes::from("SET")),
             Frame::Bulk(Bytes::from("key1")),
             Frame::Bulk(Bytes::from("2")),
+            Frame::Bulk(Bytes::from("PX")),
+            Frame::Bulk(Bytes::from("1000")),
         ]);
         let cmd = Command::try_from(frame).unwrap();
 
@@ -201,7 +205,7 @@ mod tests {
             Command::Set(Set {
                 key: String::from("key1"),
                 value: Bytes::from("2"),
-                ttl: None,
+                ttl: Some(Ttl::Px(1000)),
                 behavior: None,
                 get: false
             })
