@@ -10,6 +10,7 @@ pub mod executable;
 pub mod exists;
 pub mod get;
 pub mod getdel;
+pub mod getex;
 pub mod getrange;
 pub mod incr;
 pub mod incrby;
@@ -54,6 +55,7 @@ use del::Del;
 use exists::Exists;
 use get::Get;
 use getdel::Getdel;
+use getex::Getex;
 use getrange::Getrange;
 use incr::Incr;
 use incrby::IncrBy;
@@ -86,6 +88,7 @@ pub enum Command {
     Del(Del),
     Exists(Exists),
     Get(Get),
+    Getex(Getex),
     Getdel(Getdel),
     Getrange(Getrange),
     Incr(Incr),
@@ -129,6 +132,7 @@ impl Executable for Command {
             Command::Del(cmd) => cmd.exec(store),
             Command::Exists(cmd) => cmd.exec(store),
             Command::Get(cmd) => cmd.exec(store),
+            Command::Getex(cmd) => cmd.exec(store),
             Command::Getdel(cmd) => cmd.exec(store),
             Command::Getrange(cmd) => cmd.exec(store),
             Command::Incr(cmd) => cmd.exec(store),
@@ -190,6 +194,7 @@ impl TryFrom<Frame> for Command {
             "del" => Del::try_from(parser).map(Command::Del),
             "exists" => Exists::try_from(parser).map(Command::Exists),
             "get" => Get::try_from(parser).map(Command::Get),
+            "getex" => Getex::try_from(parser).map(Command::Getex),
             "getdel" => Getdel::try_from(parser).map(Command::Getdel),
             "getrange" => Getrange::try_from(parser).map(Command::Getrange),
             "incr" => Incr::try_from(parser).map(Command::Incr),

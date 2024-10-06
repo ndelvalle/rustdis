@@ -41,8 +41,14 @@ where
 
     let their_response: Result<Res, _> = pipeline.clone().query_async(&mut their_connection).await;
 
-    assert!(our_response.is_ok(), "Not Ok, use `test_compare_err` instead if expecting an error");
-    assert!(their_response.is_ok(), "Not Ok, use `test_compare_err` instead if expecting an error");
+    assert!(
+        our_response.is_ok(),
+        "Not Ok, use `test_compare_err` instead if expecting an error"
+    );
+    assert!(
+        their_response.is_ok(),
+        "Not Ok, use `test_compare_err` instead if expecting an error"
+    );
     assert_eq!(our_response, their_response);
 }
 
@@ -71,8 +77,14 @@ async fn test_compare_err(f: impl FnOnce(&mut redis::Pipeline)) {
 
     let their_response: Res = pipeline.clone().query_async(&mut their_connection).await;
 
-    assert!(our_response.is_err(), "Not Err, use `test_compare` instead if expecting a value");
-    assert!(their_response.is_err(), "Not Err, use `test_compare` instead if expecting a value");
+    assert!(
+        our_response.is_err(),
+        "Not Err, use `test_compare` instead if expecting a value"
+    );
+    assert!(
+        their_response.is_err(),
+        "Not Err, use `test_compare` instead if expecting a value"
+    );
     assert_eq!(our_response, their_response);
 }
 
@@ -90,6 +102,21 @@ async fn test_set_and_get() {
         p.cmd("GET").arg("set_get_key_2");
         p.cmd("GET").arg("set_get_key_3");
         p.cmd("GET").arg("set_get_nonexistentkey");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_getex() {
+    test_compare::<Vec<Value>>(|p| {
+        p.cmd("SET").arg("set_getex_1").arg(1).arg("EX").arg(1);
+        p.cmd("GETEX").arg("set_getex_1").arg("PERSIST");
+        p.cmd("TTL").arg("set_getex_1");
+
+        p.cmd("SET").arg("set_getex_2").arg(1).arg("EX").arg(1);
+        p.cmd("GETEX").arg("set_getex_1").arg("EX").arg(10);
+        p.cmd("TTL").arg("set_getex_1");
     })
     .await;
 }
