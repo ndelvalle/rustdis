@@ -56,6 +56,9 @@ pub struct InnerStoreLocked<'a> {
 
 impl<'a> InnerStoreLocked<'a> {
     pub fn set(&mut self, key: String, data: Bytes) {
+        // Ensure any previous TTL is removed.
+        self.remove(&key);
+
         let value = Value {
             data,
             expires_at: None,
@@ -64,6 +67,9 @@ impl<'a> InnerStoreLocked<'a> {
     }
 
     pub fn set_with_ttl(&mut self, key: Key, data: Bytes, ttl: Duration) {
+        // Ensure any previous TTL is removed.
+        self.remove(&key);
+
         let expires_at = Instant::now() + ttl;
         let value = Value {
             data,
@@ -85,7 +91,16 @@ impl<'a> InnerStoreLocked<'a> {
     }
 
     pub fn remove(&mut self, key: &str) -> Option<Value> {
-        self.state.keys.remove(key)
+        match self.state.keys.remove(key) {
+            None => None,
+            Some(value) => match value.expires_at {
+                Some(expires_at) => {
+                    self.state.ttls.remove(&(expires_at, key.to_string()));
+                    Some(value)
+                }
+                None => Some(value),
+            },
+        }
     }
 
     pub fn exists(&self, key: &str) -> bool {
@@ -130,7 +145,7 @@ impl<'a> InnerStoreLocked<'a> {
         Ok(value)
     }
 
-    pub fn remove_expired_keys(&mut self) -> Option<Instant> {
+    fn remove_expired_keys(&mut self) -> Option<Instant> {
         let now = Instant::now();
 
         let expired_keys: Vec<(Instant, String)> = self
@@ -258,5 +273,32 @@ mod tests {
         time::advance(Duration::from_secs(20)).await;
         time::sleep(Duration::from_millis(1)).await;
         assert_eq!(store.lock().keys().count(), 0);
+    }
+
+    #[tokio::test]
+    async fn ttl_when_removing_keys() {
+        time::pause();
+
+        let store = Store::new();
+
+        {
+            let mut store = store.lock();
+
+            store.set_with_ttl(
+                "key1".to_string(),
+                Bytes::from("value1"),
+                Duration::from_secs(10),
+            );
+            store.remove("key1");
+            store.set("key1".to_string(), Bytes::from("value2"));
+        }
+
+        assert_eq!(store.lock().keys().count(), 1);
+
+        time::advance(Duration::from_secs(10)).await;
+        time::sleep(Duration::from_millis(1)).await;
+
+        assert_eq!(store.lock().keys().count(), 1);
+        assert!(store.lock().exists("key1"));
     }
 }
