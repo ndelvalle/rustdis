@@ -119,9 +119,11 @@ impl<'a> InnerStoreLocked<'a> {
     }
 
     pub fn remove_ttl(&mut self, key: &str) {
-        if let Some(value) = self.state.keys.get(key) {
+        // Drop the immutable reference to `self.state` by cloning.
+        if let Some(value) = self.state.keys.get(key).cloned() {
             if let Some(expires_at) = value.expires_at {
                 self.state.ttls.remove(&(expires_at, key.to_string()));
+                self.set(key.to_string(), value.data);
             }
         }
     }
@@ -212,6 +214,7 @@ impl InnerStore {
 
 type Key = String;
 
+#[derive(Debug, Clone)]
 pub struct Value {
     pub data: Bytes,
     pub expires_at: Option<Instant>,
