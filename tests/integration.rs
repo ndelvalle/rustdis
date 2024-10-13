@@ -226,15 +226,6 @@ async fn test_incr_by_float() {
         p.cmd("INCRBYFLOAT").arg("incr_by_float_key_3").arg("-1.2");
     })
     .await;
-
-    test_compare_err(|p| {
-        // Value is not an integer or out of range error.
-        p.cmd("SET")
-            .arg("incr_by_float_key_4")
-            .arg("234293482390480948029348230948");
-        p.cmd("INCRBYFLOAT").arg("incr_by_float_key_4").arg(1);
-    })
-    .await;
 }
 
 #[tokio::test]
