@@ -180,8 +180,6 @@ impl<'a> InnerStoreLocked<'a> {
         self.set(key.to_string(), value.clone().into());
 
         value.parse::<R>().map_err(|_| err.to_string())
-
-        // Ok(value)
     }
 
     fn remove_expired_keys(&mut self) -> Option<Instant> {
@@ -255,14 +253,6 @@ async fn remove_expired_keys(store: Arc<InnerStore>) {
         } else {
             waker.notified().await;
         }
-    }
-}
-
-fn is_float<T: ToPrimitive>(value: T) -> bool {
-    if let Some(f) = value.to_f64() {
-        f.fract() != 0.0
-    } else {
-        false
     }
 }
 
