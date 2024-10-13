@@ -1,5 +1,7 @@
 use bytes::Bytes;
+use num_traits::{ToPrimitive, Zero};
 use std::collections::{BTreeSet, HashMap};
+use std::fmt::Display;
 use std::ops::AddAssign;
 use std::ops::Deref;
 use std::str::FromStr;
@@ -147,9 +149,10 @@ impl<'a> InnerStoreLocked<'a> {
             .map(|(key, value)| (key, &value.data))
     }
 
-    pub fn incr_by<T>(&mut self, key: &str, increment: T) -> Result<T, String>
+    pub fn incr_by<T, R>(&mut self, key: &str, increment: T) -> Result<R, String>
     where
-        T: FromStr + ToString + AddAssign + Default,
+        T: AddAssign + FromStr + Display + Zero + ToPrimitive,
+        R: FromStr,
     {
         let err = "value is not an integer or out of range";
 
@@ -158,16 +161,27 @@ impl<'a> InnerStoreLocked<'a> {
                 .map_err(|_| err.to_string())
                 .and_then(|s| s.parse::<T>().map_err(|_| err.to_string()))
             {
-                Ok(value) => value,
+                Ok(v) => v,
                 Err(e) => return Err(e),
             },
-            None => T::default(),
+            None => T::zero(),
         };
 
         value += increment;
-        self.set(key.to_string(), value.to_string().into());
 
-        Ok(value)
+        let value = match value.to_f64() {
+            Some(v) if v.fract() == 0.0 => format!("{:.0}", v), // Format as an integer if no fractional part.
+            Some(v) => format!("{:.17}", v), // Format as a float with up to 17 digits of precision.
+            // This shouldn't happen since we're only using ints and floats, but ideally, a trait
+            // would enforce this at compile time.
+            None => return Err(err.to_string()),
+        };
+
+        self.set(key.to_string(), value.clone().into());
+
+        value.parse::<R>().map_err(|_| err.to_string())
+
+        // Ok(value)
     }
 
     fn remove_expired_keys(&mut self) -> Option<Instant> {
@@ -241,6 +255,14 @@ async fn remove_expired_keys(store: Arc<InnerStore>) {
         } else {
             waker.notified().await;
         }
+    }
+}
+
+fn is_float<T: ToPrimitive>(value: T) -> bool {
+    if let Some(f) = value.to_f64() {
+        f.fract() != 0.0
+    } else {
+        false
     }
 }
 

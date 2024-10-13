@@ -27,9 +27,9 @@ pub struct IncrByFloat {
 impl Executable for IncrByFloat {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let mut store = store.lock();
-        let res = store.incr_by(&self.key, self.increment);
+        let res = store.incr_by::<f64, String>(&self.key, self.increment);
         match res {
-            Ok(res) => Ok(Frame::Simple(res.to_string())),
+            Ok(res) => Ok(Frame::Bulk(res.into())),
             Err(msg) => Ok(Frame::Error(msg.to_string())),
         }
     }
@@ -56,6 +56,7 @@ mod tests {
     #[tokio::test]
     async fn existing_key() {
         let store = Store::new();
+        store.lock().set(String::from("key1"), Bytes::from("10.50"));
 
         let frame = Frame::Array(vec![
             Frame::Bulk(Bytes::from("INCRBYFLOAT")),
@@ -72,12 +73,13 @@ mod tests {
             })
         );
 
-        store.lock().set(String::from("key1"), Bytes::from("10.50"));
-
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("10.6".to_string()));
-        assert_eq!(store.lock().get("key1"), Some(Bytes::from("10.6")));
+        assert_eq!(result, Frame::Bulk(Bytes::from("10.59999999999999964")));
+        assert_eq!(
+            store.lock().get("key1"),
+            Some(Bytes::from("10.59999999999999964"))
+        );
     }
 
     #[tokio::test]
@@ -101,7 +103,7 @@ mod tests {
 
         let result = cmd.exec(store.clone()).unwrap();
 
-        assert_eq!(result, Frame::Simple("10".to_string()));
+        assert_eq!(result, Frame::Bulk(Bytes::from("10")));
         assert_eq!(store.lock().get("key1"), Some(Bytes::from("10")));
     }
 
