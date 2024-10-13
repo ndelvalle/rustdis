@@ -18,6 +18,10 @@ impl Executable for Ttl {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let state = store.lock();
         let ttl = if state.exists(&self.key) { -1 } else { -2 };
+        let ttl = state
+            .get_ttl(&self.key)
+            .map(|ttl| ttl.as_secs() as i64)
+            .unwrap_or(ttl);
         Ok(Frame::Integer(ttl))
     }
 }
