@@ -170,8 +170,10 @@ impl<'a> InnerStoreLocked<'a> {
         value += increment;
 
         let value = match value.to_f64() {
-            Some(v) if v.fract() == 0.0 => format!("{:.0}", v), // Format as an integer if no fractional part.
-            Some(v) => format!("{:.17}", v), // Format as a float with up to 17 digits of precision.
+            // Format as an integer if no fractional part.
+            Some(v) if v.fract() == 0.0 => format!("{:.0}", v),
+            // Format as a float with up to 17 digits of precision.
+            Some(v) => format!("{:.17}", v),
             // This shouldn't happen since we're only using ints and floats, but ideally, a trait
             // would enforce this at compile time.
             None => return Err(err.to_string()),
