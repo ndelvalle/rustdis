@@ -149,6 +149,7 @@ impl Frame {
             Frame::Error(s) => {
                 let mut bytes = Vec::with_capacity(1 + s.len() + CRLF.len());
                 bytes.push(u8::from(DataType::SimpleError));
+                bytes.extend_from_slice("ERR ".as_bytes());
                 bytes.extend_from_slice(s.as_bytes());
                 bytes.extend_from_slice(CRLF);
                 bytes
@@ -219,7 +220,7 @@ impl fmt::Display for Frame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Frame::Simple(s) => write!(f, "+{}", s),
-            Frame::Error(s) => write!(f, "-{}", s),
+            Frame::Error(s) => write!(f, "-ERR {}", s),
             Frame::Integer(i) => write!(f, ":{}", i),
             Frame::Bulk(bytes) => write!(f, "${}", String::from_utf8_lossy(bytes)),
             Frame::Null => write!(f, "$-1"),
@@ -360,14 +361,14 @@ mod tests {
 
     #[test]
     fn parse_simple_error_frame() {
-        let data = b"-Error message\r\n";
+        let data = b"-ERR Error message\r\n";
         let mut cursor = Cursor::new(&data[..]);
 
         let frame = Frame::parse(&mut cursor);
 
         assert!(matches!(
             frame,
-            Ok(Frame::Error(ref s)) if s == "Error message"
+            Ok(Frame::Error(ref s)) if s == "ERR Error message"
         ));
     }
 
