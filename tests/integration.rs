@@ -350,16 +350,21 @@ async fn test_getrange() {
 #[serial]
 async fn test_keys() {
     test_compare::<Vec<Value>>(|p| {
-        // Redis keys order is deterministice but not guaranteed.
-        // We sort the keys by insertion order to make the test deterministic.
-        // Testing with a different set of keys produces different results,
-        // but matching the implementation is out of the scope of the project.
+        // Redis keys order is deterministic (always returning the same order for
+        // a given set of keys) but not guaranteed (it may change between runs).
+        //
+        // We sort in backward chronological order to get deterministic results.
+        // Matching the implementation is out of the scope of the project.
         p.cmd("SET").arg("keys_key_1").arg("Argentina");
-        p.cmd("SET").arg("keys_key_2").arg("Spain");
-        p.cmd("SET").arg("keys_key_3").arg("Netherlands");
 
         p.cmd("KEYS").arg("*");
         p.cmd("KEYS").arg("*key*");
+
+        p.cmd("SET").arg("keys_key_2").arg("Spain");
+        p.cmd("SET").arg("keys_key_3").arg("Netherlands");
+
+        p.cmd("KEYS").arg("*1");
+        p.cmd("KEYS").arg("*2");
         p.cmd("KEYS").arg("*3");
     })
     .await;
