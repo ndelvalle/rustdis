@@ -24,7 +24,7 @@ impl Executable for Keys {
         let matching_keys = store
             .iter()
             .filter(|(key, _)| glob_match(self.pattern.as_str(), key))
-            .sorted_by(|(_, a), (_, b)| b.inserted_at.cmp(&a.inserted_at))
+            .sorted_by(|(_, a), (_, b)| b.created_at.cmp(&a.created_at))
             .map(|(key, _)| Frame::Bulk(Bytes::from(key.to_string())))
             .collect::<Vec<_>>();
 
