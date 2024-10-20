@@ -30,6 +30,7 @@ strum = "0.26.2"
 strum_macros = "0.26.2"
 clap = { version = "4.5.7", features = ["derive", "env"] }
 num-traits = "0.2.19"
+itertools = "0.13.0"
 
 [dev-dependencies]
 rand = "0.8.5"
