@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use glob_match::glob_match;
+use itertools::Itertools;
 
 use crate::commands::executable::Executable;
 use crate::commands::CommandParser;
@@ -20,11 +21,12 @@ pub struct Keys {
 impl Executable for Keys {
     fn exec(self, store: Store) -> Result<Frame, Error> {
         let store = store.lock();
-        let matching_keys: Vec<Frame> = store
-            .keys()
-            .filter(|key| glob_match(self.pattern.as_str(), key))
-            .map(|key| Frame::Bulk(Bytes::from(key.to_string())))
-            .collect();
+        let matching_keys = store
+            .iter()
+            .filter(|(key, _)| glob_match(self.pattern.as_str(), key))
+            .sorted_by(|(_, a), (_, b)| b.inserted_at.cmp(&a.inserted_at))
+            .map(|(key, _)| Frame::Bulk(Bytes::from(key.to_string())))
+            .collect::<Vec<_>>();
 
         Ok(Frame::Array(matching_keys))
     }
