@@ -85,7 +85,20 @@ async fn test_compare_err(f: impl FnOnce(&mut redis::Pipeline)) {
         their_response.is_err(),
         "Not Err, use `test_compare` instead if expecting a value"
     );
-    assert_eq!(our_response, their_response);
+
+    // The `redis` crate does some parsing and wrapping of the error message. See:
+    // https://github.com/redis-rs/redis-rs/blob/e6a59325ca963c09675fafac15fbf10ddf5f4cd4/redis/src/types.rs#L743-L766
+    //
+    // We only care about the error message sent by the Redis server, which is the `detail`.
+    match (our_response, their_response) {
+        (Err(ref our_err), Err(ref their_err)) => {
+            let our_msg = our_err.detail();
+            let their_msg = their_err.detail();
+
+            assert_eq!(our_msg, their_msg);
+        }
+        _ => {}
+    }
 }
 
 #[tokio::test]
