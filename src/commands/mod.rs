@@ -25,6 +25,7 @@ pub mod mset;
 pub mod msetnx;
 pub mod object;
 pub mod ping;
+pub mod pttl;
 pub mod scan;
 pub mod select;
 pub mod set;
@@ -70,6 +71,7 @@ use mset::Mset;
 use msetnx::Msetnx;
 use object::Object;
 use ping::Ping;
+use pttl::Pttl;
 use scan::Scan;
 use select::Select;
 use set::Set;
@@ -88,8 +90,8 @@ pub enum Command {
     Del(Del),
     Exists(Exists),
     Get(Get),
-    Getex(Getex),
     Getdel(Getdel),
+    Getex(Getex),
     Getrange(Getrange),
     Incr(Incr),
     IncrBy(IncrBy),
@@ -101,6 +103,7 @@ pub enum Command {
     Mset(Mset),
     Msetnx(Msetnx),
     Object(Object),
+    Pttl(Pttl),
     Scan(Scan),
     Set(Set),
     Setnx(Setnx),
@@ -132,8 +135,8 @@ impl Executable for Command {
             Command::Del(cmd) => cmd.exec(store),
             Command::Exists(cmd) => cmd.exec(store),
             Command::Get(cmd) => cmd.exec(store),
-            Command::Getex(cmd) => cmd.exec(store),
             Command::Getdel(cmd) => cmd.exec(store),
+            Command::Getex(cmd) => cmd.exec(store),
             Command::Getrange(cmd) => cmd.exec(store),
             Command::Incr(cmd) => cmd.exec(store),
             Command::IncrBy(cmd) => cmd.exec(store),
@@ -148,6 +151,7 @@ impl Executable for Command {
             Command::Msetnx(cmd) => cmd.exec(store),
             Command::Object(cmd) => cmd.exec(store),
             Command::Ping(cmd) => cmd.exec(store),
+            Command::Pttl(cmd) => cmd.exec(store),
             Command::Scan(cmd) => cmd.exec(store),
             Command::Select(cmd) => cmd.exec(store),
             Command::Set(cmd) => cmd.exec(store),
@@ -217,6 +221,7 @@ impl TryFrom<Frame> for Command {
             "setrange" => Setrange::try_from(parser).map(Command::Setrange),
             "strlen" => Strlen::try_from(parser).map(Command::Strlen),
             "ttl" => Ttl::try_from(parser).map(Command::Ttl),
+            "pttl" => Pttl::try_from(parser).map(Command::Pttl),
             "type" => Type::try_from(parser).map(Command::Type),
             _ => Err(CommandParserError::UnknownCommand {
                 command: command_name,

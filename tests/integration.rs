@@ -29,8 +29,6 @@ where
     let mut pipeline = redis::pipe();
     f(&mut pipeline);
 
-    let our_response: Result<Res, _> = pipeline.clone().query_async(&mut our_connection).await;
-
     // Since we use the same Redis instance for all tests, we flush it to start fresh.
     // NOTE: our implementation doesn't yet persist data between runs.
     let _: Value = redis::pipe()
@@ -39,6 +37,7 @@ where
         .await
         .unwrap();
 
+    let our_response: Result<Res, _> = pipeline.clone().query_async(&mut our_connection).await;
     let their_response: Result<Res, _> = pipeline.clone().query_async(&mut their_connection).await;
 
     assert!(
@@ -123,13 +122,29 @@ async fn test_set_and_get() {
 #[serial]
 async fn test_getex() {
     test_compare::<Vec<Value>>(|p| {
-        p.cmd("SET").arg("set_getex_1").arg(1).arg("EX").arg(1);
-        p.cmd("GETEX").arg("set_getex_1").arg("PERSIST");
-        p.cmd("TTL").arg("set_getex_1");
+        p.cmd("SET").arg("getex_key_1").arg(1).arg("EX").arg(1);
+        p.cmd("GETEX").arg("getex_key_1").arg("PERSIST");
+        p.cmd("TTL").arg("getex_key_1");
 
-        p.cmd("SET").arg("set_getex_2").arg(1).arg("EX").arg(1);
-        p.cmd("GETEX").arg("set_getex_1").arg("EX").arg(10);
-        p.cmd("TTL").arg("set_getex_1");
+        p.cmd("SET").arg("getex_key_2").arg(1).arg("EX").arg(1);
+        p.cmd("TTL").arg("getex_key_2");
+        p.cmd("GETEX").arg("getex_key_2").arg("EX").arg(10);
+        p.cmd("TTL").arg("getex_key_2");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_pttl() {
+    test_compare::<Vec<Value>>(|p| {
+        p.cmd("SET").arg("pttl_key_1").arg(1).arg("EX").arg(1);
+        p.cmd("PTTL").arg("pttl_key_1");
+
+        p.cmd("SET").arg("pttl_key_2").arg(1);
+        p.cmd("PTTL").arg("pttl_key_2");
+
+        p.cmd("PTTL").arg("pttl_key_3");
     })
     .await;
 }
