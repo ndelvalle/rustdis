@@ -61,12 +61,12 @@ impl<'a> InnerStoreLocked<'a> {
         // Ensure any previous TTL is removed.
         let removed = self.remove(&key);
 
-        let inserted_at = removed.map(|v| v.inserted_at).unwrap_or(Instant::now());
+        let created_at = removed.map(|v| v.created_at).unwrap_or(Instant::now());
 
         let value = Value {
             data,
             expires_at: None,
-            inserted_at,
+            created_at,
         };
         self.state.keys.insert(key, value);
     }
@@ -75,13 +75,13 @@ impl<'a> InnerStoreLocked<'a> {
         // Ensure any previous TTL is removed.
         let removed = self.remove(&key);
 
-        let inserted_at = removed.map(|v| v.inserted_at).unwrap_or(Instant::now());
+        let created_at = removed.map(|v| v.created_at).unwrap_or(Instant::now());
 
         let expires_at = Instant::now() + ttl;
         let value = Value {
             data,
             expires_at: Some(expires_at),
-            inserted_at,
+            created_at,
         };
 
         self.state.keys.insert(key.clone(), value);
@@ -149,10 +149,7 @@ impl<'a> InnerStoreLocked<'a> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Value)> {
-        self.state
-            .keys
-            .iter()
-            .map(|(key, value)| (key, value))
+        self.state.keys.iter().map(|(key, value)| (key, value))
     }
 
     pub fn incr_by<T, R>(&mut self, key: &str, increment: T) -> Result<R, String>
@@ -238,7 +235,7 @@ type Key = String;
 pub struct Value {
     pub data: Bytes,
     pub expires_at: Option<Instant>,
-    pub inserted_at: Instant,
+    pub created_at: Instant,
 }
 
 pub struct State {
