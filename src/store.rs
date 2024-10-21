@@ -59,23 +59,29 @@ pub struct InnerStoreLocked<'a> {
 impl<'a> InnerStoreLocked<'a> {
     pub fn set(&mut self, key: String, data: Bytes) {
         // Ensure any previous TTL is removed.
-        self.remove(&key);
+        let removed = self.remove(&key);
+
+        let created_at = removed.map(|v| v.created_at).unwrap_or(Instant::now());
 
         let value = Value {
             data,
             expires_at: None,
+            created_at,
         };
         self.state.keys.insert(key, value);
     }
 
     pub fn set_with_ttl(&mut self, key: Key, data: Bytes, ttl: Duration) {
         // Ensure any previous TTL is removed.
-        self.remove(&key);
+        let removed = self.remove(&key);
+
+        let created_at = removed.map(|v| v.created_at).unwrap_or(Instant::now());
 
         let expires_at = Instant::now() + ttl;
         let value = Value {
             data,
             expires_at: Some(expires_at),
+            created_at,
         };
 
         self.state.keys.insert(key.clone(), value);
@@ -142,11 +148,8 @@ impl<'a> InnerStoreLocked<'a> {
         self.state.keys.keys()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Bytes)> {
-        self.state
-            .keys
-            .iter()
-            .map(|(key, value)| (key, &value.data))
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Value)> {
+        self.state.keys.iter().map(|(key, value)| (key, value))
     }
 
     pub fn incr_by<T, R>(&mut self, key: &str, increment: T) -> Result<R, String>
@@ -232,6 +235,7 @@ type Key = String;
 pub struct Value {
     pub data: Bytes,
     pub expires_at: Option<Instant>,
+    pub created_at: Instant,
 }
 
 pub struct State {

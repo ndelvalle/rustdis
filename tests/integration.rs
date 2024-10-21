@@ -363,15 +363,22 @@ async fn test_getrange() {
 #[tokio::test]
 #[serial]
 async fn test_keys() {
-    // TODO: The response order from the server is not guaranteed, to ensure accurate comparison
-    // with the expected result, we need to sort the response before performing the comparison.
     test_compare::<Vec<Value>>(|p| {
+        // Redis keys order is deterministic (always returning the same order for
+        // a given set of keys) but not guaranteed (it may change between runs).
+        //
+        // We sort in backward chronological order to get deterministic results.
+        // Matching the implementation is out of the scope of the project.
         p.cmd("SET").arg("keys_key_1").arg("Argentina");
-        p.cmd("SET").arg("keys_key_2").arg("Spain");
-        p.cmd("SET").arg("keys_key_3").arg("Netherlands");
 
         p.cmd("KEYS").arg("*");
         p.cmd("KEYS").arg("*key*");
+
+        p.cmd("SET").arg("keys_key_2").arg("Spain");
+        p.cmd("SET").arg("keys_key_3").arg("Netherlands");
+
+        p.cmd("KEYS").arg("*1");
+        p.cmd("KEYS").arg("*2");
         p.cmd("KEYS").arg("*3");
     })
     .await;
